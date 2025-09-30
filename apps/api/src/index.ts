@@ -1,14 +1,41 @@
-import express, { Request, Response } from 'express';
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { config } from './utils/config';
+import { requestLogger, requestId } from './middleware/logger';
+import { errorHandler, notFound } from './middleware/errorHandler';
+import routes from './routes';
 
 const app = express();
-const port = process.env.PORT || 3001;
 
-app.use(express.json());
+// Security middleware
+app.use(helmet());
 
-app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ message: 'Qyou API is healthy!' });
-});
+// CORS middleware
+app.use(cors(config.cors));
 
-app.listen(port, () => {
-  console.log(`[api]: Server is running at http://localhost:${port}`);
+// Request ID middleware
+app.use(requestId);
+
+// Request logging
+app.use(requestLogger(config.nodeEnv));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// API routes
+app.use('/api', routes);
+
+// 404 handler
+app.use(notFound);
+
+// Global error handler
+app.use(errorHandler);
+
+// Start server
+app.listen(config.port, () => {
+  console.log(`[api]: Server is running at http://localhost:${config.port}`);
+  console.log(`[api]: Environment: ${config.nodeEnv}`);
 });
