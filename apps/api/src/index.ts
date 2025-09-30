@@ -1,33 +1,89 @@
 import express, { Request, Response } from 'express'
 import { randomInt, randomBytes, createHash, timingSafeEqual, scrypt as _scrypt } from 'crypto'
 import { promisify } from 'util'
+import express, { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
+import authRoutes from './routes/auth';
+import express, { Request, Response } from 'express';
+import router from './routes/userRoutes';
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { config } from './utils/config';
+import { requestLogger, requestId } from './middleware/logger';
+import { errorHandler, notFound } from './middleware/errorHandler';
+import routes from './routes';
+
 
 const app = express();
-const port = process.env.PORT || 3001;
+
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+
+app.use('/api/auth', authRoutes);
+
+app.use(helmet());
+
+app.use("/api/users", router);
+
 
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ message: 'Qyou API is healthy!' });
 });
 
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/qyou';
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error'
+  });
+});
+
 app.listen(port, () => {
   console.log(`[api]: Server is running at http://localhost:${port}`);
+
+ app.use(cors(config.cors));
+
+
+app.use(requestId);
+
+
+app.use(requestLogger(config.nodeEnv));
+
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+
+app.use('/api', routes);
+
+
+app.use(notFound);
+
+
+app.use(errorHandler);
+
+
+app.listen(config.port, () => {
+  console.log(`[api]: Server is running at http://localhost:${config.port}`);
+  console.log(`[api]: Environment: ${config.nodeEnv}`);
+
 });
 
 const scrypt = promisify(_scrypt)
 
-// Simple in-memory user store for demo purposes. Replace with your DB.
-type User = {
-  email: string
-  passwordHash: string // Format: scrypt:<saltHex>:<hashHex>
-  resetTokenHash?: Buffer
-  resetTokenExpiresAt?: number // epoch ms
-}
 
 const users = new Map<string, User>()
 
-// Seed a demo user (password: "Password123!")
 async function seedDemoUser() {
   const email = 'test@example.com'
   const password = 'Password123!'
@@ -36,8 +92,6 @@ async function seedDemoUser() {
 }
 
 function generateResetCode(): string {
-  // 6-digit numeric code without leading zeros bias
-  // randomInt(0, 1_000_000) produces uniform 0..999999
   const code = randomInt(0, 1_000_000).toString().padStart(6, '0')
   return code
 }
@@ -60,12 +114,11 @@ function verifyResetCode(providedCode: string, storedHash?: Buffer): boolean {
 }
 
 async function sendResetCodeEmail(email: string, code: string) {
-  // Integrate with SendGrid/AWS SES here. Using console log for demo.
+  
   console.log(`[api]: Sending password reset code to ${email}: ${code}`)
 }
 
-// Forgot Password Endpoint
-// Accepts email, generates short-lived code, stores hash+expiry, and sends the code via email
+
 app.post('/api/auth/forgot-password', async (req: Request, res: Response) => {
   const { email } = req.body || {}
   if (typeof email !== 'string' || email.trim().length === 0) {
@@ -100,8 +153,7 @@ app.post('/api/auth/forgot-password', async (req: Request, res: Response) => {
   return res.status(200).json(successResponse)
 })
 
-// Reset Password Endpoint
-// Accepts email, token (code), and newPassword. Verifies token validity/expiry, updates password, invalidates token.
+
 app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
   const { email, token, newPassword } = req.body || {}
 
@@ -131,7 +183,7 @@ app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Reset token is invalid or expired' })
   }
 
-  // All good: update password and invalidate token
+  
   const newHash = await hashPassword(newPassword)
   user.passwordHash = newHash
   user.resetTokenHash = undefined
@@ -141,5 +193,5 @@ app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
   return res.status(200).json({ message: 'Password updated successfully' })
 })
 
-// Initialize demo data
+
 seedDemoUser().catch((e) => console.error('[api]: Failed to seed demo user', e))
