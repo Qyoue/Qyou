@@ -6,7 +6,15 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "apps/mobile/dist/**"]
     },
-    "lint": {},
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
