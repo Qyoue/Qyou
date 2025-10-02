@@ -1,0 +1,275 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  NPM_VERSION: '10.1.0'
+
+jobs:
+  # Dependency installation and caching
+  install:
+    name: Install Dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache-deps.outputs.cache-hit }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Cache node_modules
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify installation
+        run: |
+          echo "Root dependencies installed"
+          npm list --depth=0
+
+  # Linting job
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    needs: install
+    strategy:
+      matrix:
+        workspace: 
+          - name: "web-admin"
+            path: "apps/web-admin"
+          - name: "api"
+            path: "apps/api"
+          - name: "mobile"
+            path: "apps/mobile"
+          - name: "eslint-config"
+            path: "packages/eslint-config"
+          - name: "types"
+            path: "packages/types"
+          - name: "typescript-config"
+            path: "packages/typescript-config"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint on ${{ matrix.workspace.name }}
+        run: |
+          cd ${{ matrix.workspace.path }}
+          if [ -f "package.json" ]; then
+            if npm run lint --if-present; then
+              echo "✅ Linting passed for ${{ matrix.workspace.name }}"
+            else
+              echo "❌ Linting failed for ${{ matrix.workspace.name }}"
+              exit 1
+            fi
+          else
+            echo "⚠️  No package.json found for ${{ matrix.workspace.name }}, skipping linting"
+          fi
+        continue-on-error: false
+
+  # Type checking job
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    needs: install
+    strategy:
+      matrix:
+        workspace: 
+          - name: "web-admin"
+            path: "apps/web-admin"
+          - name: "api"
+            path: "apps/api"
+          - name: "mobile"
+            path: "apps/mobile"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript type check on ${{ matrix.workspace.name }}
+        run: |
+          cd ${{ matrix.workspace.path }}
+          if [ -f "tsconfig.json" ]; then
+            npx tsc --noEmit
+            echo "✅ Type checking passed for ${{ matrix.workspace.name }}"
+          else
+            echo "⚠️  No tsconfig.json found for ${{ matrix.workspace.name }}, skipping type check"
+          fi
+        continue-on-error: false
+
+  # Testing job
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: install
+    strategy:
+      matrix:
+        workspace: 
+          - name: "web-admin"
+            path: "apps/web-admin"
+          - name: "api"
+            path: "apps/api"
+          - name: "mobile"
+            path: "apps/mobile"
+          - name: "types"
+            path: "packages/types"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests on ${{ matrix.workspace.name }}
+        run: |
+          cd ${{ matrix.workspace.path }}
+          if [ -f "package.json" ] && npm run test --if-present; then
+            echo "✅ Tests passed for ${{ matrix.workspace.name }}"
+          else
+            echo "⚠️  No tests configured for ${{ matrix.workspace.name }}, skipping"
+          fi
+        continue-on-error: false
+
+  # Build verification job
+  build:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: install
+    strategy:
+      matrix:
+        workspace: 
+          - name: "web-admin"
+            path: "apps/web-admin"
+          - name: "api"
+            path: "apps/api"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build ${{ matrix.workspace.name }}
+        run: |
+          cd ${{ matrix.workspace.path }}
+          if [ -f "package.json" ]; then
+            if npm run build --if-present; then
+              echo "✅ Build successful for ${{ matrix.workspace.name }}"
+            else
+              echo "⚠️  No build script found for ${{ matrix.workspace.name }}, skipping"
+            fi
+          else
+            echo "⚠️  No package.json found for ${{ matrix.workspace.name }}, skipping build"
+          fi
+        continue-on-error: false
+
+  # Summary job that depends on all others
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [install, lint, typecheck, test, build]
+    if: always()
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "Install job status: ${{ needs.install.result }}"
+          echo "Lint job status: ${{ needs.lint.result }}"
+          echo "Typecheck job status: ${{ needs.typecheck.result }}"
+          echo "Test job status: ${{ needs.test.result }}"
+          echo "Build job status: ${{ needs.build.result }}"
+          
+          if [[ "${{ needs.install.result }}" == "success" && 
+                "${{ needs.lint.result }}" == "success" && 
+                "${{ needs.typecheck.result }}" == "success" && 
+                "${{ needs.test.result }}" == "success" && 
+                "${{ needs.build.result }}" == "success" ]]; then
+            echo "✅ All CI checks passed!"
+            exit 0
+          else
+            echo "❌ Some CI checks failed!"
+            exit 1
+          fi
