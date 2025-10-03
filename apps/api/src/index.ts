@@ -1,49 +1,48 @@
-import express, { Request, Response, NextFunction } from 'express';
-import mongoose from 'mongoose';
-import 'dotenv/config';
-import cors from 'cors';
-import helmet from 'helmet';
+// File: apps/api/src/index.ts
+import express, { Request, Response } from 'express';
+import connectDB from './config/db';
+import User from './models/User';
+import { walletQueue } from './queues/wallet.queue';
 
-import authRoutes from './routes/auth';
-import userRouter from './routes/userRoutes';
-import { config } from './utils/config';
-import { requestLogger, requestId } from './middleware/logger';
-import { errorHandler, notFound } from './middleware/errorHandler';
+connectDB();
 
 const app = express();
+const port = process.env.PORT || 3001;
 
-// Core middleware
-app.use(cors(config.cors));
-app.use(helmet());
-app.use(requestId);
-app.use(requestLogger(config.nodeEnv));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json());
 
-// Health check
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ message: 'Qyou API is healthy!' });
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRouter);
+// New Registration Endpoint
+app.post('/api/auth/register', async (req: Request, res: Response) => {
+  const { email, fullName } = req.body;
 
-// 404 and error handlers
-app.use(notFound);
-app.use(errorHandler);
+  if (!email || !fullName) {
+    return res.status(400).json({ msg: 'Please enter all fields' });
+  }
 
-// DB and server start
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/qyou';
-mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log('MongoDB connected');
-    app.listen(config.port, () => {
-      console.log(`[api]: Server is running at http://localhost:${config.port}`);
-      console.log(`[api]: Environment: ${config.nodeEnv}`);
-    });
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  });
+  try {
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ msg: 'User already exists' });
+    }
+
+    user = new User({ email, fullName });
+    await user.save();
+
+    // Add a job to the queue to create the wallet for this new user
+    await walletQueue.add('create-wallet', { userId: user.id });
+    console.log(`[api]: Added wallet creation job for user ${user.id}`);
+
+    res.status(201).json({ msg: 'User registered successfully. Wallet creation is in progress.' });
+  } catch (err: any) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+app.listen(port, () => {
+  console.log(`[api]: Server is running at http://localhost:${port}`);
+});

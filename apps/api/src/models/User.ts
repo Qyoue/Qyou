@@ -10,6 +10,13 @@ export interface IUser extends Document {
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
+export interface IUser extends Document {
+  email: string;
+  fullName: string;
+  stellarPublicKey?: string;
+  stellarSecretKey?: string; // NOTE: In production, this MUST be encrypted.
+}
+
 const userSchema = new Schema<IUser>({
   fullName: {
     type: String,
@@ -42,6 +49,14 @@ const userSchema = new Schema<IUser>({
 }, {
   timestamps: true
 });
+
+const UserSchema: Schema = new Schema({
+  email: { type: String, required: true, unique: true },
+  fullName: { type: String, required: true },
+  stellarPublicKey: { type: String },
+  stellarSecretKey: { type: String },
+});
+
 
 // Index for faster email lookups
 userSchema.index({ email: 1 });
