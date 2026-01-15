@@ -1,166 +1,171 @@
-# CI/CD Pipeline Documentation
+# Qyou
 
-This directory contains the GitHub Actions workflow and related configuration for the Qyou monorepo CI/CD pipeline.
+**Qyou** is an open-source, crowd-powered queuing intelligence platform that helps people avoid long lines at real-world locations like banks, hospitals, fuel stations, government offices, and service centers.
 
-## Files
+By allowing users to report and view real-time wait times, QueueWise turns everyday queuing into shared public data. Built on **Stellar**, the platform adds a lightweight trust, rewards, and incentives layer—encouraging honest reporting and enabling new queue-based micro-economies.
 
-- `workflows/ci.yml` - Main CI/CD pipeline workflow
-- `BRANCH_PROTECTION_SETUP.md` - Instructions for setting up branch protection rules
+---
 
-## Pipeline Overview
+## Why QueueWise?
 
-The CI/CD pipeline is designed to ensure code quality and prevent bugs from being merged into the main branches. It runs automatically on every push and pull request.
+Queues waste time, energy, and productivity—especially in high-traffic public services. Yet queue information is usually invisible until you arrive.
 
-### Workflow Features
+QueueWise makes wait times *visible before you commit*.
 
-✅ **Comprehensive Testing**: Runs linting, type checking, unit tests, and build verification  
-✅ **Matrix Strategy**: Parallel execution across all apps and packages  
-✅ **Smart Caching**: Caches dependencies to speed up builds  
-✅ **Branch Protection**: Blocks PRs from merging if checks fail  
-✅ **Monorepo Support**: Handles multiple apps and packages efficiently  
+With QueueWise, users can:
 
-### Trigger Events
+* Check real-time queue conditions before leaving home
+* Decide the best time to visit a location
+* Earn rewards for contributing accurate queue data
+* Hire or become a **queue buddy**—someone who holds a spot in line on your behalf
 
-- Push to `main` or `develop` branches
-- Pull requests targeting `main` or `develop` branches
+By combining crowd-sourced data with blockchain-backed incentives, QueueWise creates a system where truthful reporting is rewarded and time is treated as a valuable resource.
 
-### Jobs
+---
 
-1. **Install Dependencies** - Installs and caches npm dependencies
-2. **Lint Code** - Runs ESLint across all workspaces
-3. **Type Check** - Runs TypeScript type checking
-4. **Run Tests** - Executes Jest tests across all workspaces
-5. **Build Verification** - Ensures all apps can build successfully
-6. **CI Success** - Summary job that fails if any previous job fails
+## Core Features
 
-### Matrix Strategy
+* **Real-Time Queue Reporting** – Users submit live wait-time updates at locations
+* **Crowd Verification** – Multiple reports improve accuracy and confidence
+* **Queue Discovery** – View nearby locations and their current wait times
+* **Queue Buddies** – Hire trusted users to hold a spot in line for you
+* **Stellar-Powered Rewards** – Earn tokens for verified reports and services
+* **Reputation & Trust** – On-chain signals back honest contributors
+* **Mobile-First Experience** – Designed for fast, on-the-go reporting
 
-The pipeline uses a matrix strategy to run checks in parallel:
+---
 
-**Linting Matrix:**
-- web-admin
-- api
-- mobile
-- eslint-config
-- types
-- typescript-config
+## Architecture Overview
 
-**Type Checking Matrix:**
-- web-admin
-- api
-- mobile
+QueueWise is designed as a scalable monorepo with clear separation between user experience, core logic, and blockchain integration.
 
-**Testing Matrix:**
-- web-admin
-- api
-- mobile
-- types
+| Layer              | Technology                          |
+| ------------------ | ----------------------------------- |
+| Frontend           | React (Web & Mobile-ready)          |
+| Backend API        | Node.js / NestJS                    |
+| Database           | MongoDB                             |
+| Blockchain         | **Stellar**                         |
+| Payments & Rewards | Stellar micro-payments & incentives |
+| Authentication     | Token-based auth                    |
+| Location Services  | Maps & geolocation APIs             |
 
-**Build Verification Matrix:**
-- web-admin
-- api
+---
 
-### Caching Strategy
+## Monorepo Structure
 
-- **Cache Key**: Based on `package-lock.json` hash
-- **Cache Paths**: 
-  - `node_modules`
-  - `apps/*/node_modules`
-  - `packages/*/node_modules`
-- **Restore Keys**: Fallback to previous cache versions
+The monorepo structure enables rapid iteration while keeping responsibilities isolated:
 
-### Required Scripts
-
-Each workspace must have the following npm scripts:
-
-```json
-{
-  "scripts": {
-    "lint": "...",
-    "test": "...",
-    "typecheck": "...",
-    "build": "..."
-  }
-}
+```
+queuewise/
+├── apps/
+│   ├── web/                 # User-facing web app
+│   ├── mobile/              # Mobile app (future-ready)
+│   └── api/                 # Backend API
+├── libs/
+│   ├── queues/              # Queue models & aggregation logic
+│   ├── reports/             # Wait-time submissions & validation
+│   ├── users/               # Profiles, reputation & trust scores
+│   ├── rewards/             # Stellar rewards & payouts
+│   ├── payments/            # Queue buddy payments
+│   └── utils/               # Shared utilities
+├── contracts/               # Stellar smart contracts
+├── tests/                   # Unit & integration tests
+├── .env.example
+├── package.json
+└── README.md
 ```
 
-### Configuration Files
+---
 
-The pipeline expects the following configuration files in each workspace:
+## API Highlights
 
-- `.eslintrc.js` - ESLint configuration
-- `jest.config.js` - Jest test configuration
-- `tsconfig.json` - TypeScript configuration
+### Queues
 
-## Setup Instructions
+* `POST /queues/report` – Submit a wait-time report
+* `GET /queues/nearby` – Discover queues around a location
+* `GET /queues/:id` – View aggregated queue details
 
-1. **Install Dependencies**: Run `npm install` in the repository root
-2. **Configure Branch Protection**: Follow the instructions in `BRANCH_PROTECTION_SETUP.md`
-3. **Test the Pipeline**: Create a test pull request to verify everything works
+### Queue Buddies
 
-## Troubleshooting
+* `POST /buddies/request` – Hire a queue buddy
+* `POST /buddies/accept` – Accept a queue task
+* `GET /buddies/:id` – Track queue-holding progress
 
-### Common Issues
+### Rewards (Stellar)
 
-1. **Status checks not appearing**: Ensure the workflow file is committed to the default branch
-2. **Cache not working**: Verify `package-lock.json` files are committed
-3. **Tests failing**: Check that all required dependencies are installed
+* `POST /rewards/claim` – Claim earned rewards
+* `GET /rewards/balance` – View reward balance
+* `GET /rewards/history` – Reward activity log
 
-### Local Testing
+---
 
-You can run the same commands locally:
+## Blockchain Layer
+
+QueueWise uses **Stellar** to:
+
+* Distribute micro-rewards for verified reports
+* Power queue buddy payments
+* Anchor reputation signals and trust scores
+
+Smart contracts are intentionally minimal to keep costs low and interactions fast.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+* Node.js ≥ 18
+* MongoDB
+* Stellar Testnet account
+* npm or Yarn
+
+### Installation
 
 ```bash
-# Install dependencies
-npm ci
-
-# Run linting
-npm run lint
-
-# Run tests
-npm run test
-
-# Run type checking
-npm run typecheck
-
-# Build all apps
-npm run build
+git clone https://github.com/qyoue/qyou.git
+cd queuewise
+npm install
+cp .env.example .env
 ```
 
-## Performance
+### Run Locally
 
-The pipeline is optimized for speed:
+```bash
+npm run dev
+```
 
-- **Parallel Execution**: Jobs run in parallel where possible
-- **Dependency Caching**: Reduces installation time
-- **Conditional Execution**: Skips unnecessary steps when possible
-- **Matrix Strategy**: Efficient resource utilization
+### Testing
 
-Expected runtime: 5-10 minutes depending on changes and cache hits.
+```bash
+npm test
+```
 
-## Maintenance
+---
 
-### Adding New Workspaces
+## Contributing
 
-When adding new apps or packages:
+QueueWise is open-source and community-driven. Contributions are welcome across frontend, backend, blockchain, data aggregation, and UX.
 
-1. Add the workspace to the matrix strategies in `ci.yml`
-2. Ensure the workspace has the required scripts and configuration files
-3. Test the pipeline with the new workspace
+### How to Contribute
 
-### Updating Dependencies
+1. Fork the repository
+2. Create a branch from `main`
+3. Pick an issue or propose a new feature
+4. Keep PRs focused and well-documented
+5. Add tests where applicable
+6. Open a pull request with context and screenshots
 
-When updating dependencies:
+---
 
-1. Update `package-lock.json` files
-2. Clear GitHub Actions cache if needed
-3. Verify the pipeline still passes
+## 💬 Community & Support
 
-### Modifying the Pipeline
+For questions, feature discussions, or collaboration:
 
-When modifying the workflow:
+👉 Telegram: [https://t.me/+gRA3CdyekZw3MWM0](https://t.me/+gRA3CdyekZw3MWM0)
 
-1. Test changes in a feature branch first
-2. Ensure all matrix combinations still work
-3. Update documentation as needed
-4. Consider impact on pipeline performance
+---
+
+## 📄 License
+
+MIT License
