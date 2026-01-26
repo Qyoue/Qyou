@@ -1,23 +1,19 @@
 {
-  "name": "qyou",
+  "name": "qyou-monorepo",
+  "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "test": "turbo run test",
-    "typecheck": "turbo run typecheck"
-  },
-  "devDependencies": {
-    "@types/node": "^24.6.0",
-    "turbo": "latest"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "packageManager": "npm@10.1.0",
   "workspaces": [
     "apps/*",
-    "packages/*"
-  ]
+    "libs/*",
+    "stellar/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:admin\" \"npm run dev:mobile\"",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:admin": "npm run dev --workspace=apps/admin-web",
+    "dev:mobile": "npm run start --workspace=apps/mobile"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
 }
