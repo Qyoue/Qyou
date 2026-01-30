@@ -22,3 +22,7 @@ if (require.main === module) {
 }
 
 export { server, STELLAR_CONFIG };
+
+export * from './wallet';
+
+export { Keypair } from '@stellar/stellar-sdk';
