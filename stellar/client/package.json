@@ -1,21 +1,17 @@
 {
-  "name": "client",
+  "name": "@qyou/stellar",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/index.ts",
   "scripts": {
-    "test-net": "tsx index.ts"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "devDependencies": {
-    "@types/node": "^25.0.10",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "test-net": "tsx src/index.ts"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "^14.4.3",
-    "dotenv": "^17.2.3"
+    "@stellar/stellar-sdk": "^12.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.1",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
   }
 }
