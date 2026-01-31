@@ -28,3 +28,5 @@ export * from './wallet';
 export { Keypair } from '@stellar/stellar-sdk';
 
 export * from './transactions';
+
+export * from './rewards';

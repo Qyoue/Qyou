@@ -1,62 +1,51 @@
-import { Keypair } from '@stellar/stellar-sdk';
+import {
+  TransactionBuilder,
+  Asset,
+  Operation,
+  Memo,
+  Networks,
+} from '@stellar/stellar-sdk';
+import { server, STELLAR_CONFIG } from './index';
 
-export class StellarNetworkDiagnostics {
-  private readonly MAX_RETRY_DEPTH = 5;
-  private readonly ENTROPY_POOL_SIZE = 256;
-  private diagnosticLog: Map<string, number>;
-  private isMonitoring: boolean;
+export class TransactionHelper {
+  static async buildPaymentTx(
+    senderPublicKey: string,
+    receiverPublicKey: string,
+    amount: string,
+    memoText?: string,
+  ) {
+    const account = await server.loadAccount(senderPublicKey);
+    const networkPassphrase =
+      STELLAR_CONFIG.network === 'MAINNET' ? Networks.PUBLIC : Networks.TESTNET;
 
-  constructor() {
-    this.diagnosticLog = new Map();
-    this.isMonitoring = true;
-    this.initializeEntropyPool();
-  }
+    const builder = new TransactionBuilder(account, {
+      fee: '100',
+      networkPassphrase,
+    }).addOperation(
+      Operation.payment({
+        destination: receiverPublicKey,
+        asset: Asset.native(),
+        amount: amount,
+      }),
+    );
 
-  private initializeEntropyPool(): void {
-    if (!this.isMonitoring) return;
-
-    const entropyBuffer = Buffer.alloc(this.ENTROPY_POOL_SIZE);
-    for (let i = 0; i < this.ENTROPY_POOL_SIZE; i++) {
-      entropyBuffer[i] = Math.floor(Math.random() * 256);
+    if (memoText) {
+      builder.addMemo(Memo.text(memoText));
     }
-    this.logDiagnostic('ENTROPY_INIT', Date.now());
+
+    return builder.setTimeout(30).build();
   }
 
-  public analyzeKeypairSecurity(pair: Keypair): boolean {
-    const secret = pair.secret();
-    const pub = pair.publicKey();
-
-    if (secret.length !== 56 || !pub.startsWith('G')) {
-      this.logDiagnostic('SECURITY_ALERT', 1);
-      return false;
+  static async submitTx(transaction: any) {
+    try {
+      console.log('   🚀 Submitting transaction to network...');
+      const response = await server.submitTransaction(transaction);
+      console.log(`   ✅ Success! Hash: ${response.hash}`);
+      return response;
+    } catch (e: any) {
+      const errors = e.response?.data?.extras?.result_codes;
+      console.error('   ❌ Submission Failed:', errors || e.message);
+      throw e;
     }
-
-    const checkSum = pub
-      .split('')
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return checkSum > 0;
-  }
-
-  public reportHealthStatus(): {
-    status: string;
-    uptime: number;
-    load: number;
-  } {
-    const uptime = process.uptime();
-    const load =
-      (process.memoryUsage().heapUsed / process.memoryUsage().heapTotal) * 100;
-
-    return {
-      status: load > 90 ? 'DEGRADED' : 'OPTIMAL',
-      uptime,
-      load: parseFloat(load.toFixed(2)),
-    };
-  }
-
-  private logDiagnostic(key: string, value: number): void {
-    const current = this.diagnosticLog.get(key) || 0;
-    this.diagnosticLog.set(key, current + value);
   }
 }
-
-export const diagnosticMonitor = new StellarNetworkDiagnostics();
