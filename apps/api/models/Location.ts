@@ -14,6 +14,8 @@ export interface LocationDocument {
   type: LocationType;
   address: string;
   status: LocationStatus;
+  externalSource?: 'google_places' | 'openstreetmap';
+  externalPlaceId?: string;
   location: {
     type: 'Point';
     coordinates: [number, number];
@@ -47,6 +49,14 @@ const locationSchema = new Schema<LocationDocument>(
       default: 'active',
       required: true,
     },
+    externalSource: {
+      type: String,
+      enum: ['google_places', 'openstreetmap'],
+    },
+    externalPlaceId: {
+      type: String,
+      trim: true,
+    },
     location: {
       type: {
         type: String,
@@ -79,6 +89,10 @@ const locationSchema = new Schema<LocationDocument>(
 );
 
 locationSchema.index({ location: '2dsphere' });
+locationSchema.index(
+  { externalSource: 1, externalPlaceId: 1 },
+  { unique: true, sparse: true, name: 'source_place_unique' },
+);
 
 export const Location =
   (models.Location as Model<LocationDocument>) ||

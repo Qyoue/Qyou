@@ -9,6 +9,8 @@ import { logger } from './logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
 import { ensureLocationIndexes } from './models/Location';
+import { adminLocationSeedRouter } from './routes/adminLocationSeed';
+import { locationsRouter } from './routes/locations';
 import { authRouter } from './routes/auth';
 
 const app = express();
@@ -18,6 +20,8 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/qyou';
 app.use(cors());
 app.use(express.json());
 app.use('/auth', authRouter);
+app.use('/admin', adminLocationSeedRouter);
+app.use('/locations', locationsRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'Qyou API', timestamp: new Date() });
