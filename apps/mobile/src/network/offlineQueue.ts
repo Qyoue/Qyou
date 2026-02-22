@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AxiosInstance } from "axios";
+import { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import { setQueueState } from "./queueState";
 import { QueuedRequest } from "./types";
 
@@ -62,15 +62,17 @@ export const flushQueuedRequests = async (apiClient: AxiosInstance): Promise<voi
       const item = queue[i];
 
       try {
-        await apiClient.request({
+        const requestConfig = {
           method: item.method,
           url: item.url,
           headers: item.headers,
           params: item.params,
           data: item.data,
           timeout: item.timeout,
-          metadata: { skipQueue: true },
-        });
+        } as InternalAxiosRequestConfig & { metadata?: { skipQueue?: boolean } };
+        requestConfig.metadata = { skipQueue: true };
+
+        await apiClient.request(requestConfig);
 
         queue = removeAt(queue, i);
         await saveQueue(queue);

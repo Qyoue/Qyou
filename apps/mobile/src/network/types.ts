@@ -1,5 +1,3 @@
-import { Method } from "axios";
-
 export type QueueableMethod = "post" | "put" | "patch" | "delete";
 
 export type QueuedRequest = {
@@ -14,8 +12,8 @@ export type QueuedRequest = {
   retryCount: number;
 };
 
-export const isQueueableMethod = (method?: Method): method is QueueableMethod => {
+export const isQueueableMethod = (method?: unknown): method is QueueableMethod => {
   if (!method) return false;
-  const normalized = method.toLowerCase();
+  const normalized = String(method).toLowerCase();
   return normalized === "post" || normalized === "put" || normalized === "patch" || normalized === "delete";
 };

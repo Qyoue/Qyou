@@ -4,20 +4,6 @@ import { enqueueRequest, flushQueuedRequests, getPendingQueueCount } from "./off
 import { getQueueState, setQueueState } from "./queueState";
 import { QueuedRequest, isQueueableMethod } from "./types";
 
-declare module "axios" {
-  export interface AxiosRequestConfig<D = unknown> {
-    metadata?: {
-      skipQueue?: boolean;
-    };
-  }
-
-  export interface InternalAxiosRequestConfig<D = unknown> {
-    metadata?: {
-      skipQueue?: boolean;
-    };
-  }
-}
-
 const baseURL = process.env.EXPO_PUBLIC_API_URL;
 if (!baseURL) {
   throw new Error("EXPO_PUBLIC_API_URL is required");
@@ -98,7 +84,7 @@ export const initializeApiClient = async () => {
       if (!config) {
         return Promise.reject(error);
       }
-      if (config.metadata?.skipQueue) {
+      if (hasSkipQueueFlag(config)) {
         return Promise.reject(error);
       }
       if (!isQueueableMethod(config.method)) {
@@ -141,4 +127,10 @@ export const flushPendingRequests = async () => {
     return;
   }
   await flushQueuedRequests(apiClient);
+};
+
+const hasSkipQueueFlag = (config?: InternalAxiosRequestConfig): boolean => {
+  if (!config) return false;
+  const metadata = (config as InternalAxiosRequestConfig & { metadata?: { skipQueue?: boolean } }).metadata;
+  return Boolean(metadata?.skipQueue);
 };
