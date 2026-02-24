@@ -1,46 +1,68 @@
-import { useState } from "react";
-import { Button, StyleSheet, Text, View } from "react-native";
-import { apiClient, flushPendingRequests } from "@/src/network/apiClient";
-import { useOfflineQueueStatus } from "@/src/network/useOfflineQueueStatus";
+import { useEffect, useMemo, useRef } from "react";
+import { StyleSheet, Text, View, useColorScheme } from "react-native";
+import MapView, { PROVIDER_GOOGLE, Region } from "react-native-maps";
+import { darkMapStyle, lightMapStyle } from "@/src/map/mapStyles";
+import { getBoundingBoxFromRegion } from "@/src/map/mapBounds";
+import { useMapViewportStore } from "@/src/store/mapViewportStore";
 
 export default function Index() {
-  const { isOnline, pendingCount, isFlushing } = useOfflineQueueStatus();
-  const [lastAction, setLastAction] = useState("No actions yet.");
+  const colorScheme = useColorScheme();
+  const setBoundingBox = useMapViewportStore((state) => state.setBoundingBox);
+  const boundingBox = useMapViewportStore((state) => state.boundingBox);
 
-  const queueDemoMutation = async () => {
-    try {
-      const response = await apiClient.post("/queues/report", {
-        waitTimeMinutes: 15,
-        note: "offline-queue-demo",
-      });
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-      if ((response.data as { queued?: boolean }).queued) {
-        setLastAction("POST queued offline. It will sync automatically when internet returns.");
-      } else {
-        setLastAction("POST sent successfully.");
-      }
-    } catch {
-      setLastAction("POST failed and could not be queued.");
+  const customMapStyle = useMemo(
+    () => (colorScheme === "dark" ? darkMapStyle : lightMapStyle),
+    [colorScheme]
+  );
+
+  const initialRegion: Region = {
+    latitude: 6.5244,
+    longitude: 3.3792,
+    latitudeDelta: 0.08,
+    longitudeDelta: 0.08,
+  };
+
+  const onRegionChangeComplete = (region: Region) => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
     }
+
+    debounceTimer.current = setTimeout(() => {
+      setBoundingBox(getBoundingBoxFromRegion(region));
+    }, 500);
   };
 
-  const triggerManualFlush = async () => {
-    await flushPendingRequests();
-    setLastAction("Manual sync triggered.");
-  };
+  useEffect(() => {
+    setBoundingBox(getBoundingBoxFromRegion(initialRegion));
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [setBoundingBox]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Offline API Queue</Text>
-      <Text style={styles.text}>Network: {isOnline ? "Online" : "Offline"}</Text>
-      <Text style={styles.text}>Pending requests: {pendingCount}</Text>
-      <Text style={styles.text}>Flushing: {isFlushing ? "Yes" : "No"}</Text>
-      <View style={styles.spacer} />
-      <Button title="Send Demo POST" onPress={queueDemoMutation} />
-      <View style={styles.spacer} />
-      <Button title="Manual Sync" onPress={triggerManualFlush} />
-      <View style={styles.spacer} />
-      <Text style={styles.note}>{lastAction}</Text>
+      <MapView
+        provider={PROVIDER_GOOGLE}
+        style={styles.map}
+        initialRegion={initialRegion}
+        onRegionChangeComplete={onRegionChangeComplete}
+        customMapStyle={customMapStyle}
+      />
+
+      <View style={styles.panel}>
+        <Text style={styles.title}>Viewport Sync (Debounced 500ms)</Text>
+        <Text style={styles.text}>
+          NE: {boundingBox ? `${boundingBox.northEast.latitude.toFixed(5)}, ${boundingBox.northEast.longitude.toFixed(5)}` : "--"}
+        </Text>
+        <Text style={styles.text}>
+          SW: {boundingBox ? `${boundingBox.southWest.latitude.toFixed(5)}, ${boundingBox.southWest.longitude.toFixed(5)}` : "--"}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -48,23 +70,28 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
+  },
+  map: {
+    flex: 1,
+  },
+  panel: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 24,
+    borderRadius: 14,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   title: {
-    fontSize: 24,
+    color: "#ffffff",
+    fontSize: 14,
     fontWeight: "700",
-    marginBottom: 12,
+    marginBottom: 6,
   },
   text: {
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  spacer: {
-    height: 12,
-  },
-  note: {
-    fontSize: 14,
-    color: "#333",
+    color: "#dce3ea",
+    fontSize: 12,
   },
 });
