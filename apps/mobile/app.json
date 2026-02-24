@@ -11,7 +11,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Qyou uses your location to show nearby queues and verify proof of queue presence."
+        "NSLocationWhenInUseUsageDescription": "Qyou uses your location to show nearby queues and verify proof of queue presence.",
+        "NSFaceIDUsageDescription": "Qyou uses Face ID to unlock your secured session tokens."
       }
     },
     "android": {
@@ -38,6 +39,12 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Qyou uses your location to show nearby queues and verify proof of queue presence."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Qyou uses Face ID to unlock your secured session tokens."
         }
       ],
       [
