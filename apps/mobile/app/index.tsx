@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Button, Linking, StyleSheet, Text, View, useColorScheme } from "react-native";
-import MapView, { PROVIDER_GOOGLE, Region } from "react-native-maps";
+import MapView, { Region } from "react-native-maps";
 import { darkMapStyle, lightMapStyle } from "@/src/map/mapStyles";
 import { getBoundingBoxFromRegion } from "@/src/map/mapBounds";
 import { useMapViewportStore } from "@/src/store/mapViewportStore";
@@ -79,7 +79,6 @@ export default function Index() {
         ref={(ref) => {
           mapRef.current = ref;
         }}
-        provider={PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={initialRegion}
         onRegionChangeComplete={onRegionChangeComplete}
