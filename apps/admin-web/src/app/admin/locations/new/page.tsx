@@ -1,10 +1,5 @@
-import dynamic from "next/dynamic";
-
-const LocationCreationForm = dynamic(
-  () => import("@/components/admin/LocationCreationForm"),
-  { ssr: false }
-);
+import LocationCreationFormClient from "@/components/admin/LocationCreationFormClient";
 
 export default function NewLocationPage() {
-  return <LocationCreationForm />;
+  return <LocationCreationFormClient />;
 }
