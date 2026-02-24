@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Button, Linking, StyleSheet, Text, View, useColorScheme } from "react-native";
-import MapView, { Region } from "react-native-maps";
+import MapView, { Marker, Region } from "react-native-maps";
 import { darkMapStyle, lightMapStyle } from "@/src/map/mapStyles";
 import { getBoundingBoxFromRegion } from "@/src/map/mapBounds";
 import { useMapViewportStore } from "@/src/store/mapViewportStore";
 import { useLocationEngine } from "@/src/location/useLocationEngine";
+import { useBoundingBoxPolling } from "@/src/polling/useBoundingBoxPolling";
+import { useLocationsStore } from "@/src/store/locationsStore";
 
 export default function Index() {
   const colorScheme = useColorScheme();
@@ -19,6 +21,11 @@ export default function Index() {
     retryPermissionFlow,
     backgroundTrackingPreparation,
   } = useLocationEngine();
+  useBoundingBoxPolling();
+
+  const orderedIds = useLocationsStore((state) => state.orderedIds);
+  const locationsById = useLocationsStore((state) => state.locationsById);
+  const isPolling = useLocationsStore((state) => state.isPolling);
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mapRef = useRef<MapView | null>(null);
@@ -85,7 +92,23 @@ export default function Index() {
         customMapStyle={customMapStyle}
         showsUserLocation={permissionStage === "granted"}
         showsMyLocationButton
-      />
+      >
+        {orderedIds.map((id) => {
+          const locationItem = locationsById[id];
+          if (!locationItem) {
+            return null;
+          }
+
+          return (
+            <Marker
+              key={id}
+              coordinate={locationItem.coordinate}
+              title={locationItem.name}
+              description={`${locationItem.type} • ${locationItem.address}`}
+            />
+          );
+        })}
+      </MapView>
 
       <View style={styles.panel}>
         <Text style={styles.title}>Viewport + Location Engine</Text>
@@ -97,6 +120,8 @@ export default function Index() {
         </Text>
         <Text style={styles.text}>Permission: {permissionStage}</Text>
         <Text style={styles.text}>Accuracy: {accuracyMode}</Text>
+        <Text style={styles.text}>Polling: {isPolling ? "fetching" : "idle"}</Text>
+        <Text style={styles.text}>Cached locations: {orderedIds.length}</Text>
         <Text style={styles.text}>
           Background hook: {backgroundTrackingPreparation.ready ? "ready" : "prepared"} ({backgroundTrackingPreparation.taskName})
         </Text>
