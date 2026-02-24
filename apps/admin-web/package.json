@@ -8,6 +8,7 @@
     "start": "node ../../libs/config/validate-env.cjs admin-web && next start"
   },
   "dependencies": {
+    "jose": "^6.1.0",
     "next": "16.1.4",
     "react": "19.2.3",
     "react-dom": "19.2.3"
