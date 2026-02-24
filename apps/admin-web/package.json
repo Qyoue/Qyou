@@ -8,6 +8,7 @@
     "start": "node ../../libs/config/validate-env.cjs admin-web && next start"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.20.5",
     "@hookform/resolvers": "^3.9.1",
     "leaflet": "^1.9.4",
     "jose": "^6.1.0",
