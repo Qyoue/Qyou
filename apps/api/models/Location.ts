@@ -20,6 +20,8 @@ export interface LocationDocument {
     type: 'Point';
     coordinates: [number, number];
   };
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const locationSchema = new Schema<LocationDocument>(
