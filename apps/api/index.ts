@@ -12,6 +12,7 @@ import { ensureLocationIndexes } from './models/Location';
 import { adminLocationSeedRouter } from './routes/adminLocationSeed';
 import { locationsRouter } from './routes/locations';
 import { authRouter } from './routes/auth';
+import { shutdownLocationCache } from './services/locationCache';
 
 const app = express();
 const PORT = process.env.API_PORT || 4000;
@@ -56,10 +57,16 @@ const server = app.listen(PORT, async () => {
 
 process.on('unhandledRejection', (reason: unknown) => {
   logger.fatal({ err: reason }, 'Unhandled promise rejection');
-  server.close(() => process.exit(1));
+  server.close(async () => {
+    await shutdownLocationCache();
+    process.exit(1);
+  });
 });
 
 process.on('uncaughtException', (error: Error) => {
   logger.fatal({ err: error }, 'Uncaught exception');
-  server.close(() => process.exit(1));
+  server.close(async () => {
+    await shutdownLocationCache();
+    process.exit(1);
+  });
 });

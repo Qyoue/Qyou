@@ -139,7 +139,7 @@ router.get('/nearby', async (req, res) => {
     })),
   );
 
-  return res.json({
+  res.json({
     success: true,
     data: {
       source: 'mongodb',
@@ -270,7 +270,7 @@ router.get('/clusters', async (req, res) => {
     };
   });
 
-  return res.json({
+  res.json({
     success: true,
     data: {
       zoomLevel,
@@ -320,5 +320,4 @@ router.get('/:id', async (req, res) => {
     },
   });
 });
-
 export const locationsRouter = router;

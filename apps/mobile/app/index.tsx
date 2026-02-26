@@ -155,7 +155,6 @@ export default function Index() {
       cancelled = true;
     };
   }, [locationsById, selectedLocationId]);
-
   return (
     <View style={styles.container}>
       <MapView
