@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ValidationError } from '../errors/AppError';
 import { LocationType, Location } from '../models/Location';
+import { cacheLocations, getNearbyFromCache } from '../services/locationCache';
 
 const router = Router();
 
@@ -74,6 +75,25 @@ router.get('/nearby', async (req, res) => {
     queryFilter.type = typeFilter;
   }
 
+  const cached = await getNearbyFromCache({
+    lng,
+    lat,
+    radiusInMeters,
+    limit,
+    typeFilter,
+  });
+
+  if (cached) {
+    return res.json({
+      success: true,
+      data: {
+        source: 'redis',
+        count: cached.length,
+        items: cached,
+      },
+    });
+  }
+
   const locations = await Location.aggregate([
     {
       $geoNear: {
@@ -108,9 +128,21 @@ router.get('/nearby', async (req, res) => {
     },
   ]);
 
+  await cacheLocations(
+    locations.map((item) => ({
+      _id: item._id,
+      name: item.name,
+      type: item.type,
+      address: item.address,
+      status: item.status,
+      location: item.location,
+    })),
+  );
+
   res.json({
     success: true,
     data: {
+      source: 'mongodb',
       count: locations.length,
       items: locations,
     },

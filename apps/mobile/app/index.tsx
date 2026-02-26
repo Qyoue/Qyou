@@ -7,6 +7,7 @@ import { useMapViewportStore } from "@/src/store/mapViewportStore";
 import { useLocationEngine } from "@/src/location/useLocationEngine";
 import { useBoundingBoxPolling } from "@/src/polling/useBoundingBoxPolling";
 import { useLocationsStore } from "@/src/store/locationsStore";
+import { getExpansionRegionForCluster, useMapClusters } from "@/src/map/useMapClusters";
 
 export default function Index() {
   const colorScheme = useColorScheme();
@@ -30,6 +31,7 @@ export default function Index() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mapRef = useRef<MapView | null>(null);
   const hasCenteredOnUser = useRef(false);
+  const currentRegionRef = useRef<Region | null>(null);
 
   const customMapStyle = useMemo(
     () => (colorScheme === "dark" ? darkMapStyle : lightMapStyle),
@@ -44,6 +46,7 @@ export default function Index() {
   };
 
   const onRegionChangeComplete = (region: Region) => {
+    currentRegionRef.current = region;
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
@@ -54,6 +57,7 @@ export default function Index() {
   };
 
   useEffect(() => {
+    currentRegionRef.current = initialRegion;
     setBoundingBox(getBoundingBoxFromRegion(initialRegion));
 
     return () => {
@@ -80,6 +84,8 @@ export default function Index() {
     );
   }, [location]);
 
+  const clusters = useMapClusters(currentRegionRef.current, orderedIds, locationsById);
+
   return (
     <View style={styles.container}>
       <MapView
@@ -93,21 +99,32 @@ export default function Index() {
         showsUserLocation={permissionStage === "granted"}
         showsMyLocationButton
       >
-        {orderedIds.map((id) => {
-          const locationItem = locationsById[id];
-          if (!locationItem) {
-            return null;
-          }
-
-          return (
+        {clusters.map((item) =>
+          item.isCluster ? (
             <Marker
-              key={id}
-              coordinate={locationItem.coordinate}
-              title={locationItem.name}
-              description={`${locationItem.type} • ${locationItem.address}`}
+              key={item.id}
+              coordinate={item.coordinate}
+              onPress={() => {
+                const expansion = getExpansionRegionForCluster(
+                  item,
+                  currentRegionRef.current || initialRegion
+                );
+                mapRef.current?.animateToRegion(expansion, 400);
+              }}
+            >
+              <View style={styles.clusterBubble}>
+                <Text style={styles.clusterText}>{item.pointCount}</Text>
+              </View>
+            </Marker>
+          ) : (
+            <Marker
+              key={item.id}
+              coordinate={item.coordinate}
+              title={item.title}
+              description={item.description}
             />
-          );
-        })}
+          )
+        )}
       </MapView>
 
       <View style={styles.panel}>
@@ -122,6 +139,7 @@ export default function Index() {
         <Text style={styles.text}>Accuracy: {accuracyMode}</Text>
         <Text style={styles.text}>Polling: {isPolling ? "fetching" : "idle"}</Text>
         <Text style={styles.text}>Cached locations: {orderedIds.length}</Text>
+        <Text style={styles.text}>Rendered markers: {clusters.length}</Text>
         <Text style={styles.text}>
           Background hook: {backgroundTrackingPreparation.ready ? "ready" : "prepared"} ({backgroundTrackingPreparation.taskName})
         </Text>
@@ -230,5 +248,21 @@ const styles = StyleSheet.create({
     color: "#fff7e2",
     fontSize: 12,
     fontWeight: "600",
+  },
+  clusterBubble: {
+    minWidth: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#0f7d5f",
+    borderWidth: 2,
+    borderColor: "#d6f7ec",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  clusterText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 12,
   },
 });
