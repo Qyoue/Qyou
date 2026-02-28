@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Linking, StyleSheet, Text, View, useColorScheme } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
 import { darkMapStyle, lightMapStyle } from "@/src/map/mapStyles";
@@ -8,6 +8,20 @@ import { useLocationEngine } from "@/src/location/useLocationEngine";
 import { useBoundingBoxPolling } from "@/src/polling/useBoundingBoxPolling";
 import { useLocationsStore } from "@/src/store/locationsStore";
 import { getExpansionRegionForCluster, useMapClusters } from "@/src/map/useMapClusters";
+import { apiClient } from "@/src/network/apiClient";
+import { LocationBottomSheet, LocationSheetDetails } from "@/src/map/LocationBottomSheet";
+
+type LocationDetailsResponse = {
+  data?: {
+    item?: {
+      _id?: string;
+      name?: string;
+      type?: string;
+      address?: string;
+      status?: string;
+    };
+  };
+};
 
 export default function Index() {
   const colorScheme = useColorScheme();
@@ -32,6 +46,9 @@ export default function Index() {
   const mapRef = useRef<MapView | null>(null);
   const hasCenteredOnUser = useRef(false);
   const currentRegionRef = useRef<Region | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [selectedDetails, setSelectedDetails] = useState<LocationSheetDetails | null>(null);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
 
   const customMapStyle = useMemo(
     () => (colorScheme === "dark" ? darkMapStyle : lightMapStyle),
@@ -86,6 +103,58 @@ export default function Index() {
 
   const clusters = useMapClusters(currentRegionRef.current, orderedIds, locationsById);
 
+  useEffect(() => {
+    if (!selectedLocationId) {
+      setSelectedDetails(null);
+      setIsDetailsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const fallback = locationsById[selectedLocationId];
+
+    setIsDetailsLoading(true);
+    void (async () => {
+      try {
+        const response = await apiClient.get(`/locations/${selectedLocationId}`);
+        const payload = response.data as LocationDetailsResponse;
+        const item = payload.data?.item;
+        if (cancelled) return;
+
+        if (item?._id) {
+          setSelectedDetails({
+            id: item._id,
+            name: item.name || fallback?.name || "Location",
+            type: item.type || fallback?.type || "unknown",
+            address: item.address || fallback?.address || "No address available",
+            status: item.status,
+            distanceFromUser: fallback?.distanceFromUser,
+          });
+          return;
+        }
+      } catch {
+        // Fallback to local cached map item.
+      }
+
+      if (!cancelled && fallback) {
+        setSelectedDetails({
+          id: fallback.id,
+          name: fallback.name,
+          type: fallback.type,
+          address: fallback.address,
+          distanceFromUser: fallback.distanceFromUser,
+        });
+      }
+    })().finally(() => {
+      if (!cancelled) {
+        setIsDetailsLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locationsById, selectedLocationId]);
   return (
     <View style={styles.container}>
       <MapView
@@ -122,6 +191,12 @@ export default function Index() {
               coordinate={item.coordinate}
               title={item.title}
               description={item.description}
+              onPress={() => {
+                const targetId = item.pointIds[0];
+                if (targetId) {
+                  setSelectedLocationId(targetId);
+                }
+              }}
             />
           )
         )}
@@ -179,6 +254,15 @@ export default function Index() {
           </Text>
         </View>
       )}
+
+      <LocationBottomSheet
+        visible={Boolean(selectedLocationId)}
+        loading={isDetailsLoading}
+        details={selectedDetails}
+        onDismiss={() => {
+          setSelectedLocationId(null);
+        }}
+      />
     </View>
   );
 }

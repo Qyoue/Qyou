@@ -286,4 +286,38 @@ router.get('/clusters', async (req, res) => {
   });
 });
 
+router.get('/:id', async (req, res) => {
+  const id = String(req.params.id || '');
+  if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+    throw new ValidationError('id must be a valid location identifier');
+  }
+
+  const location = await Location.findById(id, {
+    _id: 1,
+    name: 1,
+    type: 1,
+    address: 1,
+    status: 1,
+    location: 1,
+    createdAt: 1,
+    updatedAt: 1,
+  }).lean();
+
+  if (!location) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Location not found',
+      },
+    });
+  }
+
+  return res.json({
+    success: true,
+    data: {
+      item: location,
+    },
+  });
+});
 export const locationsRouter = router;
