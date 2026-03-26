@@ -49,6 +49,7 @@ export default function Index() {
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<LocationSheetDetails | null>(null);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+  const [detailsRefreshKey, setDetailsRefreshKey] = useState(0);
 
   const customMapStyle = useMemo(
     () => (colorScheme === "dark" ? darkMapStyle : lightMapStyle),
@@ -154,7 +155,7 @@ export default function Index() {
     return () => {
       cancelled = true;
     };
-  }, [locationsById, selectedLocationId]);
+  }, [detailsRefreshKey, locationsById, selectedLocationId]);
   return (
     <View style={styles.container}>
       <MapView
@@ -259,6 +260,9 @@ export default function Index() {
         visible={Boolean(selectedLocationId)}
         loading={isDetailsLoading}
         details={selectedDetails}
+        onReportSubmitted={() => {
+          setDetailsRefreshKey((current) => current + 1);
+        }}
         onDismiss={() => {
           setSelectedLocationId(null);
         }}
