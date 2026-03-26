@@ -95,4 +95,55 @@ router.post('/locations/seed', requireAdmin, async (req, res) => {
   });
 });
 
+router.post('/locations', requireAdmin, async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  const type = String(req.body?.type || '').trim();
+  const address = String(req.body?.address || '').trim();
+  const latitude = Number(req.body?.latitude);
+  const longitude = Number(req.body?.longitude);
+
+  if (!name || name.length < 2) {
+    throw new ValidationError('name must be at least 2 characters');
+  }
+  if (!['bank', 'hospital', 'atm', 'government', 'fuel_station', 'other'].includes(type)) {
+    throw new ValidationError('type must be one of: bank, hospital, atm, government, fuel_station, other');
+  }
+  if (!address || address.length < 5) {
+    throw new ValidationError('address must be at least 5 characters');
+  }
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+    throw new ValidationError('latitude must be between -90 and 90');
+  }
+  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+    throw new ValidationError('longitude must be between -180 and 180');
+  }
+
+  const location = await Location.create({
+    name,
+    type,
+    address,
+    status: 'active',
+    location: {
+      type: 'Point',
+      coordinates: [longitude, latitude],
+    },
+  });
+
+  res.status(201).json({
+    success: true,
+    data: {
+      item: {
+        id: String(location._id),
+        name: location.name,
+        type: location.type,
+        status: location.status,
+        address: location.address,
+        coordinates: location.location.coordinates,
+        createdAt: location.createdAt,
+        updatedAt: location.updatedAt,
+      },
+    },
+  });
+});
+
 export const adminLocationSeedRouter = router;
