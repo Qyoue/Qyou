@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node ../../libs/config/validate-env.cjs api && tsx watch index.ts",
     "build": "node ../../libs/config/validate-env.cjs api && tsc",
-    "seed:locations": "node ../../libs/config/validate-env.cjs api && tsx scripts/seed-locations.ts"
+    "seed:locations": "node ../../libs/config/validate-env.cjs api && tsx scripts/seed-locations.ts",
+    "seed:demo": "node ../../libs/config/validate-env.cjs api && tsx scripts/seed-demo.ts"
   },
   "keywords": [],
   "author": "",
