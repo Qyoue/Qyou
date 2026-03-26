@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { Router } from 'express';
 import { AuthError, ValidationError } from '../errors/AppError';
+import { authRateLimit } from '../middleware/rateLimit';
 import { Session } from '../models/Session';
 import { User } from '../models/User';
 import {
@@ -13,6 +14,8 @@ import {
 } from '../auth/tokens';
 
 const router = Router();
+
+router.use(authRateLimit);
 
 const revokeAllUserSessions = async (userId: string, reason: string) => {
   await Session.updateMany(
