@@ -9,6 +9,7 @@ import { logger } from './logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
 import { ensureLocationIndexes } from './models/Location';
+import { adminAuditLogsRouter } from './routes/adminAuditLogs';
 import { adminLocationSeedRouter } from './routes/adminLocationSeed';
 import { locationsRouter } from './routes/locations';
 import { authRouter } from './routes/auth';
@@ -22,6 +23,7 @@ app.use(cors());
 app.use(express.json());
 app.use('/auth', authRouter);
 app.use('/admin', adminLocationSeedRouter);
+app.use('/admin', adminAuditLogsRouter);
 app.use('/locations', locationsRouter);
 
 app.get('/health', (req, res) => {

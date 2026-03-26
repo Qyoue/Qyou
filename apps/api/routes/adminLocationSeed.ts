@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { ValidationError } from '../errors/AppError';
 import { requireAdmin } from '../middleware/adminAuth';
 import { Location } from '../models/Location';
+import { recordAuditEvent } from '../services/auditLog';
 import { seedLocationsFromProvider } from '../services/placeSeed';
 
 const router = Router();
@@ -89,6 +90,24 @@ router.get('/locations', requireAdmin, async (req, res) => {
 
 router.post('/locations/seed', requireAdmin, async (req, res) => {
   const result = await seedLocationsFromProvider(req.body || {});
+
+  const authorization = req.headers.authorization || '';
+  const actorRole = authorization.startsWith('Bearer ') ? 'ADMIN' : undefined;
+
+  await recordAuditEvent({
+    action: 'ADMIN_LOCATION_SEED',
+    actorRole,
+    targetType: 'location-seed-job',
+    metadata: {
+      provider: result.provider,
+      fetched: result.fetched,
+      inserted: result.inserted,
+      updated: result.updated,
+      durationMs: result.durationMs,
+    },
+    req,
+  });
+
   res.json({
     success: true,
     data: result,
