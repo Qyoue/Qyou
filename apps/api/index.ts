@@ -8,6 +8,7 @@ import { AuthError } from './errors/AppError';
 import { logger } from './logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
+import { queueReportRewardMiddleware } from './middleware/queueReportReward';
 import { ensureLocationIndexes } from './models/Location';
 import { adminLocationSeedRouter } from './routes/adminLocationSeed';
 import { locationsRouter } from './routes/locations';
@@ -20,6 +21,7 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/qyou';
 
 app.use(cors());
 app.use(express.json());
+app.use('/queues/report', queueReportRewardMiddleware);
 app.use('/auth', authRouter);
 app.use('/admin', adminLocationSeedRouter);
 app.use('/locations', locationsRouter);
