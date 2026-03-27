@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Linking, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { Button, Linking, Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { router } from "expo-router";
 import MapView, { Marker, Region } from "react-native-maps";
 import { darkMapStyle, lightMapStyle } from "@/src/map/mapStyles";
 import { getBoundingBoxFromRegion } from "@/src/map/mapBounds";
@@ -10,6 +11,7 @@ import { useLocationsStore } from "@/src/store/locationsStore";
 import { getExpansionRegionForCluster, useMapClusters } from "@/src/map/useMapClusters";
 import { apiClient } from "@/src/network/apiClient";
 import { LocationBottomSheet, LocationSheetDetails } from "@/src/map/LocationBottomSheet";
+import { logoutSession } from "@/src/auth/authClient";
 
 type LocationDetailsResponse = {
   data?: {
@@ -218,6 +220,16 @@ export default function Index() {
         <Text style={styles.text}>
           Background hook: {backgroundTrackingPreparation.ready ? "ready" : "prepared"} ({backgroundTrackingPreparation.taskName})
         </Text>
+        <Pressable
+          onPress={() => {
+            void logoutSession().finally(() => {
+              router.replace("/login");
+            });
+          }}
+          style={styles.logoutButton}
+        >
+          <Text style={styles.logoutText}>Sign Out</Text>
+        </Pressable>
       </View>
 
       {(permissionStage === "needs-education" || permissionStage === "requesting") && (
@@ -283,6 +295,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.7)",
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  logoutButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    backgroundColor: "#183246",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  logoutText: {
+    color: "#d8ebf8",
+    fontSize: 13,
+    fontWeight: "700",
   },
   title: {
     color: "#ffffff",
