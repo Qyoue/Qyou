@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Linking, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { Link } from "expo-router";
 import MapView, { Marker, Region } from "react-native-maps";
 import { darkMapStyle, lightMapStyle } from "@/src/map/mapStyles";
 import { getBoundingBoxFromRegion } from "@/src/map/mapBounds";
@@ -218,6 +219,9 @@ export default function Index() {
         <Text style={styles.text}>
           Background hook: {backgroundTrackingPreparation.ready ? "ready" : "prepared"} ({backgroundTrackingPreparation.taskName})
         </Text>
+        <Link href="/profile" style={styles.profileLink}>
+          Open Profile
+        </Link>
       </View>
 
       {(permissionStage === "needs-education" || permissionStage === "requesting") && (
@@ -293,6 +297,12 @@ const styles = StyleSheet.create({
   text: {
     color: "#dce3ea",
     fontSize: 12,
+  },
+  profileLink: {
+    color: "#9fe3ff",
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 10,
   },
   modal: {
     position: "absolute",
