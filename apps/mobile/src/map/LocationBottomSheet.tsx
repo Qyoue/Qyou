@@ -1,6 +1,18 @@
-import { useEffect, useMemo, useRef } from "react";
-import { Dimensions, PanResponder, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { apiClient } from "@/src/network/apiClient";
+import { useOfflineQueueStatus } from "@/src/network/useOfflineQueueStatus";
+import { getStoredSessionTokens } from "@/src/auth/secureTokens";
 
 export type LocationSheetDetails = {
   id: string;
@@ -16,7 +28,11 @@ type LocationBottomSheetProps = {
   loading: boolean;
   details: LocationSheetDetails | null;
   onDismiss: () => void;
+  onReportSubmitted?: () => void;
 };
+
+const REPORT_LEVELS = ["none", "low", "medium", "high", "unknown"] as const;
+type ReportLevel = (typeof REPORT_LEVELS)[number];
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const SHEET_HEIGHT = Math.max(Math.round(SCREEN_HEIGHT * 0.9), 420);
@@ -45,10 +61,22 @@ export function LocationBottomSheet({
   loading,
   details,
   onDismiss,
+  onReportSubmitted,
 }: LocationBottomSheetProps) {
   const translateY = useSharedValue(CLOSE_POSITION);
   const startYRef = useRef(SNAP_50);
   const isClosingRef = useRef(false);
+  const queueState = useOfflineQueueStatus();
+  const [waitTimeMinutes, setWaitTimeMinutes] = useState("");
+  const [level, setLevel] = useState<ReportLevel>("medium");
+  const [notes, setNotes] = useState("");
+  const [submissionState, setSubmissionState] = useState<{
+    status: "idle" | "submitting" | "queued" | "success" | "error";
+    message: string;
+  }>({
+    status: "idle",
+    message: "",
+  });
 
   useEffect(() => {
     if (visible) {
@@ -60,6 +88,20 @@ export function LocationBottomSheet({
     startYRef.current = CLOSE_POSITION;
     translateY.value = withTiming(CLOSE_POSITION, { duration: 180 });
   }, [translateY, visible]);
+
+  useEffect(() => {
+    if (!visible || !details?.id) {
+      return;
+    }
+
+    setWaitTimeMinutes("");
+    setLevel("medium");
+    setNotes("");
+    setSubmissionState({
+      status: "idle",
+      message: "",
+    });
+  }, [details?.id, visible]);
 
   const panResponder = useMemo(
     () =>
@@ -103,6 +145,66 @@ export function LocationBottomSheet({
     return null;
   }
 
+  const handleSubmitReport = async () => {
+    if (!details?.id) {
+      return;
+    }
+
+    const parsedWait = waitTimeMinutes.trim() ? Number(waitTimeMinutes.trim()) : undefined;
+    if (parsedWait !== undefined && (!Number.isFinite(parsedWait) || parsedWait < 0)) {
+      setSubmissionState({
+        status: "error",
+        message: "Wait time must be a positive number.",
+      });
+      return;
+    }
+
+    setSubmissionState({
+      status: "submitting",
+      message: "",
+    });
+
+    try {
+      const stored = await getStoredSessionTokens();
+      const response = await apiClient.post(
+        "/queues/report",
+        {
+          locationId: details.id,
+          waitTimeMinutes: parsedWait,
+          level,
+          notes: notes.trim() || undefined,
+        },
+        {
+          headers: stored.accessToken
+            ? {
+                Authorization: `Bearer ${stored.accessToken}`,
+                ...(stored.deviceId ? { "x-device-id": stored.deviceId } : {}),
+              }
+            : undefined,
+        }
+      );
+
+      if (response.status === 202 || response.data?.queued) {
+        setSubmissionState({
+          status: "queued",
+          message: "Report queued offline and will sync automatically.",
+        });
+        return;
+      }
+
+      setSubmissionState({
+        status: "success",
+        message: "Queue report submitted.",
+      });
+      onReportSubmitted?.();
+    } catch (error) {
+      setSubmissionState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Unable to submit queue report right now.",
+      });
+    }
+  };
+
   return (
     <Animated.View style={[styles.container, animatedStyle]} {...panResponder.panHandlers}>
       <View style={styles.handle} />
@@ -117,6 +219,73 @@ export function LocationBottomSheet({
             <Text style={styles.row}>Distance: {details.distanceFromUser.toFixed(0)} m</Text>
           ) : null}
           {details.status ? <Text style={styles.row}>Status: {details.status}</Text> : null}
+
+          <View style={styles.reportSection}>
+            <Text style={styles.reportTitle}>Send queue update</Text>
+            <Text style={styles.reportCopy}>
+              Reports submitted while offline are queued automatically and retried on reconnect.
+            </Text>
+            <Text style={styles.reportMeta}>
+              Sync state: {queueState.isOnline ? "online" : "offline"} • Pending queue: {queueState.pendingCount}
+            </Text>
+
+            <TextInput
+              keyboardType="numeric"
+              onChangeText={setWaitTimeMinutes}
+              placeholder="Wait time in minutes"
+              placeholderTextColor="#7f96ab"
+              style={styles.input}
+              value={waitTimeMinutes}
+            />
+
+            <View style={styles.levelRow}>
+              {REPORT_LEVELS.map((item) => (
+                <Pressable
+                  key={item}
+                  onPress={() => setLevel(item)}
+                  style={[styles.levelChip, level === item ? styles.levelChipActive : null]}
+                >
+                  <Text style={[styles.levelChipText, level === item ? styles.levelChipTextActive : null]}>
+                    {item}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <TextInput
+              multiline
+              onChangeText={setNotes}
+              placeholder="Optional note"
+              placeholderTextColor="#7f96ab"
+              style={[styles.input, styles.notesInput]}
+              value={notes}
+            />
+
+            {submissionState.message ? (
+              <Text
+                style={[
+                  styles.reportMessage,
+                  submissionState.status === "error" ? styles.reportMessageError : styles.reportMessageSuccess,
+                ]}
+              >
+                {submissionState.message}
+              </Text>
+            ) : null}
+
+            <Pressable
+              disabled={submissionState.status === "submitting"}
+              onPress={() => {
+                void handleSubmitReport();
+              }}
+              style={styles.submitButton}
+            >
+              {submissionState.status === "submitting" ? (
+                <ActivityIndicator color="#07131d" />
+              ) : (
+                <Text style={styles.submitText}>Submit Report</Text>
+              )}
+            </Pressable>
+          </View>
         </View>
       ) : (
         <Text style={styles.loadingText}>No location selected.</Text>
@@ -170,6 +339,92 @@ const styles = StyleSheet.create({
     color: "#dce7f0",
     fontSize: 14,
     marginBottom: 6,
+  },
+  reportSection: {
+    marginTop: 18,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(135, 161, 184, 0.24)",
+  },
+  reportTitle: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  reportCopy: {
+    color: "#a8bccf",
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 6,
+  },
+  reportMeta: {
+    color: "#9fe3ff",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+  input: {
+    backgroundColor: "#0b1822",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#254055",
+    color: "#f4fbff",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  notesInput: {
+    minHeight: 76,
+    textAlignVertical: "top",
+  },
+  levelRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 10,
+  },
+  levelChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#294151",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  levelChipActive: {
+    backgroundColor: "#9fe3ff",
+    borderColor: "#9fe3ff",
+  },
+  levelChipText: {
+    color: "#d0dfeb",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "capitalize",
+  },
+  levelChipTextActive: {
+    color: "#07131d",
+  },
+  reportMessage: {
+    fontSize: 12,
+    marginBottom: 10,
+  },
+  reportMessageError: {
+    color: "#ff9797",
+  },
+  reportMessageSuccess: {
+    color: "#9ce6ba",
+  },
+  submitButton: {
+    minHeight: 46,
+    backgroundColor: "#9fe3ff",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  submitText: {
+    color: "#07131d",
+    fontSize: 14,
+    fontWeight: "800",
   },
   hint: {
     marginTop: 14,
