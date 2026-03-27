@@ -12,6 +12,7 @@ import { ensureLocationIndexes } from './models/Location';
 import { adminLocationSeedRouter } from './routes/adminLocationSeed';
 import { locationsRouter } from './routes/locations';
 import { authRouter } from './routes/auth';
+import { queuesRouter } from './routes/queues';
 import { shutdownLocationCache } from './services/locationCache';
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(express.json());
 app.use('/auth', authRouter);
 app.use('/admin', adminLocationSeedRouter);
 app.use('/locations', locationsRouter);
+app.use('/queues', queuesRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'Qyou API', timestamp: new Date() });
