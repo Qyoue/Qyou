@@ -15,6 +15,8 @@ export interface SessionDocument {
   revokedAt?: Date;
   revokedReason?: string;
   expiresAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const sessionSchema = new Schema<SessionDocument>(
