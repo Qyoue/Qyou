@@ -132,6 +132,13 @@ npm run test-net
 
 ```
 
+### 5. Phase 1 Demo Checklist
+
+Use the Phase 1 runbook and smoke checklist before demos or review sessions:
+
+- `docs/demo/phase-1-demo.md`
+- `docs/demo/phase-1-smoke-checklist.md`
+
 ---
 
 ## API Highlights
