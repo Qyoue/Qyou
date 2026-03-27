@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { Router } from 'express';
 import { AuthError, ValidationError } from '../errors/AppError';
 import { requireEmail, requireMinLength, requireString } from '../lib/validation';
+import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth';
 import { Session } from '../models/Session';
 import { User } from '../models/User';
 import {
@@ -15,6 +16,18 @@ import {
 
 const router = Router();
 
+const readCurrentDeviceId = (req: { headers: Record<string, unknown>; body?: Record<string, unknown> }) => {
+  const headerValue = req.headers['x-device-id'];
+  const headerDeviceId =
+    typeof headerValue === 'string'
+      ? headerValue.trim()
+      : Array.isArray(headerValue)
+        ? String(headerValue[0] || '').trim()
+        : '';
+  const bodyDeviceId = String(req.body?.deviceId || '').trim();
+  return headerDeviceId || bodyDeviceId;
+};
+
 const revokeAllUserSessions = async (userId: string, reason: string) => {
   await Session.updateMany(
     { userId, status: { $ne: 'revoked' } },
@@ -26,6 +39,31 @@ const revokeAllUserSessions = async (userId: string, reason: string) => {
       },
     },
   );
+};
+
+const revokeMatchingSessions = async (params: {
+  userId: string;
+  reason: string;
+  deviceId?: string;
+}) => {
+  const filter: Record<string, unknown> = {
+    userId: params.userId,
+    status: { $ne: 'revoked' },
+  };
+
+  if (params.deviceId) {
+    filter.deviceId = params.deviceId;
+  }
+
+  const result = await Session.updateMany(filter, {
+    $set: {
+      status: 'revoked',
+      revokedAt: new Date(),
+      revokedReason: params.reason,
+    },
+  });
+
+  return result.modifiedCount;
 };
 
 router.post('/register', async (req, res) => {
@@ -180,6 +218,91 @@ router.post('/refresh', async (req, res) => {
       accessToken: tokenPair.accessToken,
       refreshToken: tokenPair.refreshToken,
       deviceId: payload.deviceId,
+    },
+  });
+});
+
+router.get('/me', requireAuth, async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const user = await User.findById(authReq.auth.userId, {
+    _id: 1,
+    email: 1,
+    role: 1,
+    createdAt: 1,
+    updatedAt: 1,
+  }).lean();
+
+  if (!user) {
+    throw new AuthError('User account not found');
+  }
+
+  res.json({
+    success: true,
+    data: {
+      user: {
+        id: String(user._id),
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    },
+  });
+});
+
+router.get('/sessions', requireAuth, async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const currentDeviceId = readCurrentDeviceId(req as typeof req & { body?: Record<string, unknown> });
+
+  const sessions = await Session.find({ userId: authReq.auth.userId })
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .lean();
+
+  res.json({
+    success: true,
+    data: {
+      items: sessions.map((session) => ({
+        id: String(session._id),
+        deviceId: session.deviceId,
+        familyId: session.familyId,
+        tokenId: session.tokenId,
+        status: session.status,
+        expiresAt: session.expiresAt,
+        consumedAt: session.consumedAt,
+        revokedAt: session.revokedAt,
+        revokedReason: session.revokedReason,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+        isCurrentDevice: Boolean(currentDeviceId && session.deviceId === currentDeviceId),
+      })),
+    },
+  });
+});
+
+router.post('/logout', requireAuth, async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const requestedScope = String(req.body?.scope || 'current-device').trim().toLowerCase();
+  const scope = requestedScope === 'all-devices' ? 'all-devices' : 'current-device';
+  const deviceId = readCurrentDeviceId(req);
+
+  const revokedCount =
+    scope === 'all-devices'
+      ? await revokeMatchingSessions({
+          userId: authReq.auth.userId,
+          reason: 'USER_LOGOUT_ALL_DEVICES',
+        })
+      : await revokeMatchingSessions({
+          userId: authReq.auth.userId,
+          deviceId: deviceId || undefined,
+          reason: deviceId ? 'USER_LOGOUT_CURRENT_DEVICE' : 'USER_LOGOUT_FALLBACK_ALL',
+        });
+
+  res.json({
+    success: true,
+    data: {
+      scope,
+      revokedCount,
+      deviceId: deviceId || null,
     },
   });
 });
