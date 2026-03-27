@@ -9,19 +9,8 @@ import { useBoundingBoxPolling } from "@/src/polling/useBoundingBoxPolling";
 import { useLocationsStore } from "@/src/store/locationsStore";
 import { getExpansionRegionForCluster, useMapClusters } from "@/src/map/useMapClusters";
 import { apiClient } from "@/src/network/apiClient";
+import type { LocationDetailsResponse } from "@/src/network/contracts";
 import { LocationBottomSheet, LocationSheetDetails } from "@/src/map/LocationBottomSheet";
-
-type LocationDetailsResponse = {
-  data?: {
-    item?: {
-      _id?: string;
-      name?: string;
-      type?: string;
-      address?: string;
-      status?: string;
-    };
-  };
-};
 
 export default function Index() {
   const colorScheme = useColorScheme();
