@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { Router } from 'express';
 import { AuthError, ValidationError } from '../errors/AppError';
+import { requireEmail, requireMinLength, requireString } from '../lib/validation';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth';
 import { Session } from '../models/Session';
 import { User } from '../models/User';
@@ -66,15 +67,8 @@ const revokeMatchingSessions = async (params: {
 };
 
 router.post('/register', async (req, res) => {
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  const password = String(req.body?.password || '');
-
-  if (!email || !password) {
-    throw new ValidationError('email and password are required');
-  }
-  if (password.length < 8) {
-    throw new ValidationError('password must be at least 8 characters');
-  }
+  const email = requireEmail(req.body?.email);
+  const password = requireMinLength(requireString(req.body?.password, 'password'), 'password', 8);
 
   const existing = await User.findOne({ email }).lean();
   if (existing) {
@@ -98,13 +92,9 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  const password = String(req.body?.password || '');
+  const email = requireEmail(req.body?.email);
+  const password = requireString(req.body?.password, 'password');
   const providedDeviceId = String(req.body?.deviceId || '').trim();
-
-  if (!email || !password) {
-    throw new ValidationError('email and password are required');
-  }
 
   const user = await User.findOne({ email });
   if (!user) {
@@ -160,10 +150,7 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/refresh', async (req, res) => {
-  const refreshToken = String(req.body?.refreshToken || '');
-  if (!refreshToken) {
-    throw new ValidationError('refreshToken is required');
-  }
+  const refreshToken = requireString(req.body?.refreshToken, 'refreshToken');
 
   const payload = verifyRefreshToken(refreshToken);
   const tokenHash = hashToken(refreshToken);

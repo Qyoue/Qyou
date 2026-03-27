@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { ValidationError } from '../errors/AppError';
+import { parseEnum, requireString } from '../lib/validation';
 import { requireAdmin } from '../middleware/adminAuth';
 import { Location } from '../models/Location';
 import { seedLocationsFromProvider } from '../services/placeSeed';
@@ -14,19 +15,13 @@ const parsePositiveInt = (value: unknown, fallback: number) => {
 };
 
 const parseSortField = (value: unknown) => {
-  const sort = String(value || 'createdAt');
-  if (!SORT_FIELDS.includes(sort as (typeof SORT_FIELDS)[number])) {
-    throw new ValidationError(`sort must be one of: ${SORT_FIELDS.join(', ')}`);
-  }
-  return sort;
+  const raw = value === undefined ? 'createdAt' : value;
+  return parseEnum(raw, 'sort', SORT_FIELDS);
 };
 
 const parseSortDirection = (value: unknown) => {
-  const dir = String(value || 'desc').toLowerCase();
-  if (dir !== 'asc' && dir !== 'desc') {
-    throw new ValidationError('dir must be either asc or desc');
-  }
-  return dir as 'asc' | 'desc';
+  const raw = value === undefined ? 'desc' : String(value).toLowerCase();
+  return parseEnum(raw, 'dir', ['asc', 'desc'] as const);
 };
 
 router.get('/locations', requireAdmin, async (req, res) => {
@@ -34,7 +29,7 @@ router.get('/locations', requireAdmin, async (req, res) => {
   const pageSize = Math.min(parsePositiveInt(req.query.pageSize, 50), 50);
   const sortField = parseSortField(req.query.sort);
   const sortDirection = parseSortDirection(req.query.dir);
-  const typeFilter = req.query.type ? String(req.query.type) : '';
+  const typeFilter = req.query.type ? requireString(req.query.type, 'type') : '';
   const search = req.query.search ? String(req.query.search).trim() : '';
 
   const filter: Record<string, unknown> = {};
