@@ -10,9 +10,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
 import { queueReportRateLimit } from './middleware/rateLimit';
 import { ensureLocationIndexes } from './models/Location';
-import { adminLocationSeedRouter } from './routes/adminLocationSeed';
-import { locationsRouter } from './routes/locations';
-import { authRouter } from './routes/auth';
+import { adminModule, authModule, locationsModule } from './modules';
 import { shutdownLocationCache } from './services/locationCache';
 
 const app = express();
