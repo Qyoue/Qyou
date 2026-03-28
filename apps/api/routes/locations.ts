@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { ValidationError } from '../errors/AppError';
+import { optionalEnum, parseFiniteNumber, parseIntegerInRange } from '../lib/validation';
 import { LocationType, Location } from '../models/Location';
 import { cacheLocations, getNearbyFromCache } from '../services/locationCache';
 import { buildQueueSnapshotForLocation } from '../services/queueSnapshots';
@@ -15,40 +16,17 @@ const VALID_TYPES: LocationType[] = [
   'other',
 ];
 
-const parseFiniteNumber = (value: unknown, name: string): number => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    throw new ValidationError(`${name} must be a valid number`);
-  }
-  return parsed;
-};
-
 const parseLimit = (value: unknown, max = 200): number => {
   if (value === undefined) return 50;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > max) {
-    throw new ValidationError(`limit must be an integer between 1 and ${max}`);
-  }
-  return parsed;
+  return parseIntegerInRange(value, 'limit', 1, max);
 };
 
 const parseTypeFilter = (value: unknown): LocationType | undefined => {
-  if (value === undefined || value === null || value === '') {
-    return undefined;
-  }
-  const type = String(value) as LocationType;
-  if (!VALID_TYPES.includes(type)) {
-    throw new ValidationError(`typeFilter must be one of: ${VALID_TYPES.join(', ')}`);
-  }
-  return type;
+  return optionalEnum(value, 'typeFilter', VALID_TYPES);
 };
 
 const parseZoomLevel = (value: unknown): number => {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 22) {
-    throw new ValidationError('zoomLevel must be an integer between 1 and 22');
-  }
-  return parsed;
+  return parseIntegerInRange(value, 'zoomLevel', 1, 22);
 };
 
 router.get('/nearby', async (req, res) => {

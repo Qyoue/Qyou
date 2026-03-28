@@ -1,6 +1,7 @@
 import { Model, Schema, Types, model, models } from 'mongoose';
 
 export type QueueReportLevel = 'none' | 'low' | 'medium' | 'high' | 'unknown';
+export type QueueReportStatus = 'accepted' | 'rejected';
 
 export interface QueueReportDocument {
   locationId: Types.ObjectId;
@@ -9,6 +10,7 @@ export interface QueueReportDocument {
   level: QueueReportLevel;
   notes?: string;
   status: 'accepted' | 'rejected';
+  status: QueueReportStatus;
   rejectionReason?: string;
   reportedAt: Date;
   createdAt?: Date;
@@ -67,10 +69,17 @@ const queueReportSchema = new Schema<QueueReportDocument>(
     timestamps: true,
   },
 );
-
-queueReportSchema.index({ locationId: 1, reportedAt: -1 }, { name: 'location_reported_at_desc' });
+queueReportSchema.index({ userId: 1, reportedAt: -1 }, { name: 'user_reported_at_desc' });
+queueReportSchema.index(
+  { locationId: 1, userId: 1, reportedAt: -1 },
+  { name: 'location_user_reported_at_desc' },
+);
 
 export const QueueReport =
   (models.QueueReport as Model<QueueReportDocument>) ||
   model<QueueReportDocument>('QueueReport', queueReportSchema);
+
+export const ensureQueueReportIndexes = async () => {
+  await QueueReport.syncIndexes();
+};
 
