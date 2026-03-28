@@ -13,6 +13,7 @@ import { adminAuditLogsRouter } from './routes/adminAuditLogs';
 import { adminLocationSeedRouter } from './routes/adminLocationSeed';
 import { locationsRouter } from './routes/locations';
 import { authRouter } from './routes/auth';
+import { adminModule, authModule, locationsModule } from './modules';
 import { shutdownLocationCache } from './services/locationCache';
 
 const app = express();
