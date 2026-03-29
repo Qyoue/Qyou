@@ -10,6 +10,7 @@ import { useBoundingBoxPolling } from "@/src/polling/useBoundingBoxPolling";
 import { useLocationsStore } from "@/src/store/locationsStore";
 import { getExpansionRegionForCluster, useMapClusters } from "@/src/map/useMapClusters";
 import { apiClient } from "@/src/network/apiClient";
+import type { LocationDetailsResponse } from "@/src/network/contracts";
 import { LocationBottomSheet, LocationSheetDetails } from "@/src/map/LocationBottomSheet";
 import { logoutSession } from "@/src/auth/authClient";
 
