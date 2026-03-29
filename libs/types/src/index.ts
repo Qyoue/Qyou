@@ -1,5 +1,12 @@
+export type ApiErrorCode =
+  | 'VALIDATION_ERROR'
+  | 'AUTH_ERROR'
+  | 'NOT_FOUND'
+  | 'INTERNAL_SERVER_ERROR'
+  | string;
+
 export type ApiError = {
-  code: string;
+  code: ApiErrorCode;
   message: string;
 };
 
@@ -23,37 +30,79 @@ export type SessionTokens = {
   deviceId?: string;
 };
 
-export type QueueSnapshot = {
-  locationId: string;
-  level: 'none' | 'low' | 'medium' | 'high' | 'unknown';
-  estimatedWaitMinutes?: number;
-  reportCount: number;
-  confidence: number;
-  lastUpdatedAt: string | null;
-  isStale: boolean;
-};
-
-export type AdminLocationRow = {
+export type UserPublic = {
   id: string;
-  name: string;
-  type: string;
-  status: string;
-  address: string;
-  coordinates: [number, number] | null;
+  email: string;
+  role: UserRole;
   createdAt?: string;
   updatedAt?: string;
 };
 
-export type NearbyLocationItem = {
-  _id?: string;
-  id?: string;
+export type LocationStatus = 'active' | 'inactive';
+export type LocationType =
+  | 'bank'
+  | 'hospital'
+  | 'atm'
+  | 'government'
+  | 'fuel_station'
+  | 'other';
+
+export type GeoPoint = {
+  type: 'Point';
+  coordinates: [number, number]; // [lng, lat]
+};
+
+export type Location = {
+  id: string;
   name: string;
-  type: string;
+  type: LocationType;
   address: string;
-  distanceFromUser?: number;
-  location?: {
-    coordinates: [number, number];
-  };
-  queueSnapshot?: QueueSnapshot;
+  status: LocationStatus;
+  location: GeoPoint;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type QueueLevel = 'none' | 'low' | 'medium' | 'high' | 'unknown';
+
+export type QueueReport = {
+  id: string;
+  locationId: string;
+  userId: string;
+  waitTimeMinutes?: number;
+  level: QueueLevel;
+  notes?: string;
+  reportedAt: string; // ISO
+};
+
+export type QueueSnapshot = {
+  locationId: string;
+  level: QueueLevel;
+  estimatedWaitMinutes?: number;
+  reportCount: number;
+  confidence: number; // 0..1
+  lastUpdatedAt: string; // ISO
+  isStale: boolean;
+};
+
+export type RewardTransactionType = 'EARN' | 'SPEND' | 'CLAIM';
+export type RewardTransactionStatus = 'PENDING' | 'CONFIRMED' | 'FAILED';
+
+export type RewardTransaction = {
+  id: string;
+  userId: string;
+  amount: number;
+  type: RewardTransactionType;
+  status: RewardTransactionStatus;
+  timestamp: number;
+  memo?: string;
+  reference?: string;
+};
+
+export type RewardBalance = {
+  userId: string;
+  balance: number;
+  lifetimeEarned?: number;
+  lastUpdatedAt?: string;
 };
 

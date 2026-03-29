@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Stack, router, usePathname } from "expo-router";
 import { useEffect } from "react";
 import { initializeApiClient, shutdownApiClient } from "@/src/network/apiClient";
 import { Button, StyleSheet, Text, View } from "react-native";
@@ -6,6 +6,7 @@ import { useSessionBootstrap } from "@/src/auth/useSessionBootstrap";
 
 export default function RootLayout() {
   const { state, message, retry } = useSessionBootstrap();
+  const pathname = usePathname();
 
   useEffect(() => {
     void initializeApiClient();
@@ -13,6 +14,23 @@ export default function RootLayout() {
       shutdownApiClient();
     };
   }, []);
+
+  useEffect(() => {
+    if (state === "loading" || state === "locked") {
+      return;
+    }
+
+    const isAuthRoute = pathname === "/login" || pathname === "/register";
+
+    if (state === "unauthenticated" && !isAuthRoute) {
+      router.replace("/login");
+      return;
+    }
+
+    if (state === "authenticated" && isAuthRoute) {
+      router.replace("/");
+    }
+  }, [pathname, state]);
 
   if (state === "loading") {
     return (
@@ -34,7 +52,13 @@ export default function RootLayout() {
     );
   }
 
-  return <Stack />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="register" />
+    </Stack>
+  );
 }
 
 const styles = StyleSheet.create({
