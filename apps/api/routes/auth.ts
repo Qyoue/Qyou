@@ -6,6 +6,7 @@ import { requireEmail, requireMinLength, requireString } from '../lib/validation
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth';
 import { Session } from '../models/Session';
 import { User } from '../models/User';
+import { recordAuditEvent } from '../services/auditLog';
 import {
   generateDeviceId,
   generateFamilyId,
@@ -84,6 +85,16 @@ router.post('/register', async (req, res) => {
     role: 'USER',
   });
 
+  await recordAuditEvent({
+    action: 'AUTH_REGISTER',
+    actorId: String(user._id),
+    actorEmail: user.email,
+    actorRole: user.role,
+    targetType: 'user',
+    targetId: String(user._id),
+    req,
+  });
+
   res.status(201).json({
     success: true,
     data: {
@@ -139,6 +150,20 @@ router.post('/login', async (req, res) => {
     refreshTokenHash: hashToken(tokenPair.refreshToken),
     expiresAt: tokenPair.refreshExpiresAt,
     status: 'active',
+  });
+
+  await recordAuditEvent({
+    action: 'AUTH_LOGIN',
+    actorId: String(user._id),
+    actorEmail: user.email,
+    actorRole: user.role,
+    targetType: 'session',
+    targetId: tokenId,
+    metadata: {
+      deviceId,
+      familyId,
+    },
+    req,
   });
 
   res.json({
@@ -212,6 +237,20 @@ router.post('/refresh', async (req, res) => {
     parentTokenHash: tokenHash,
     expiresAt: tokenPair.refreshExpiresAt,
     status: 'active',
+  });
+
+  await recordAuditEvent({
+    action: 'AUTH_REFRESH',
+    actorId: String(user._id),
+    actorEmail: user.email,
+    actorRole: user.role,
+    targetType: 'session',
+    targetId: nextTokenId,
+    metadata: {
+      deviceId: payload.deviceId,
+      familyId: payload.familyId,
+    },
+    req,
   });
 
   res.json({
