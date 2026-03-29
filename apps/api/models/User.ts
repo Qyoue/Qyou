@@ -4,6 +4,8 @@ export interface UserDocument {
   email: string;
   passwordHash: string;
   role: 'USER' | 'ADMIN';
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const userSchema = new Schema<UserDocument>(

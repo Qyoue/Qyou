@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { ValidationError } from '../errors/AppError';
+import { optionalEnum, parseFiniteNumber, parseIntegerInRange } from '../lib/validation';
 import { LocationType, Location } from '../models/Location';
 import { cacheLocations, getNearbyFromCache } from '../services/locationCache';
+import { buildQueueSnapshotForLocation } from '../services/queueSnapshots';
 
 const router = Router();
 
@@ -14,40 +16,17 @@ const VALID_TYPES: LocationType[] = [
   'other',
 ];
 
-const parseFiniteNumber = (value: unknown, name: string): number => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    throw new ValidationError(`${name} must be a valid number`);
-  }
-  return parsed;
-};
-
 const parseLimit = (value: unknown, max = 200): number => {
   if (value === undefined) return 50;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > max) {
-    throw new ValidationError(`limit must be an integer between 1 and ${max}`);
-  }
-  return parsed;
+  return parseIntegerInRange(value, 'limit', 1, max);
 };
 
 const parseTypeFilter = (value: unknown): LocationType | undefined => {
-  if (value === undefined || value === null || value === '') {
-    return undefined;
-  }
-  const type = String(value) as LocationType;
-  if (!VALID_TYPES.includes(type)) {
-    throw new ValidationError(`typeFilter must be one of: ${VALID_TYPES.join(', ')}`);
-  }
-  return type;
+  return optionalEnum(value, 'typeFilter', VALID_TYPES);
 };
 
 const parseZoomLevel = (value: unknown): number => {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 22) {
-    throw new ValidationError('zoomLevel must be an integer between 1 and 22');
-  }
-  return parsed;
+  return parseIntegerInRange(value, 'zoomLevel', 1, 22);
 };
 
 router.get('/nearby', async (req, res) => {
@@ -84,12 +63,20 @@ router.get('/nearby', async (req, res) => {
   });
 
   if (cached) {
+    const snapshotEntries = await Promise.all(
+      cached.map(async (item) => [item.id, await buildQueueSnapshotForLocation(item.id)] as const),
+    );
+    const snapshots = Object.fromEntries(snapshotEntries);
+
     return res.json({
       success: true,
       data: {
         source: 'redis',
         count: cached.length,
-        items: cached,
+        items: cached.map((item) => ({
+          ...item,
+          queueSnapshot: snapshots[item.id],
+        })),
       },
     });
   }
@@ -139,12 +126,20 @@ router.get('/nearby', async (req, res) => {
     })),
   );
 
+  const snapshotEntries = await Promise.all(
+    locations.map(async (item) => [String(item._id), await buildQueueSnapshotForLocation(String(item._id))] as const),
+  );
+  const snapshots = Object.fromEntries(snapshotEntries);
+
   res.json({
     success: true,
     data: {
       source: 'mongodb',
       count: locations.length,
-      items: locations,
+      items: locations.map((item) => ({
+        ...item,
+        queueSnapshot: snapshots[String(item._id)],
+      })),
     },
   });
 });
@@ -313,10 +308,15 @@ router.get('/:id', async (req, res) => {
     });
   }
 
+  const snapshot = await buildQueueSnapshotForLocation(id);
+
   return res.json({
     success: true,
     data: {
-      item: location,
+      item: {
+        ...location,
+        queueSnapshot: snapshot,
+      },
     },
   });
 });

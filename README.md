@@ -97,7 +97,7 @@ npm install
 
 ### 2. Configuration
 
-Create a `.env` file in the root directory (copy from `.env.example` if available):
+Create a `.env` file in the root directory:
 
 ```bash
 # API Config
@@ -108,6 +108,18 @@ MONGO_URI=mongodb://localhost:27017/qyou
 STELLAR_NETWORK=TESTNET
 
 ```
+
+You can also copy the included templates:
+
+```bash
+cp .env.example .env
+```
+
+Per-workspace templates are available at:
+- `apps/api/.env.example`
+- `apps/admin-web/.env.example`
+- `apps/mobile/.env.example`
+- `stellar/client/.env.example`
 
 ### 3. Run Locally (The "All-in-One" Command)
 
