@@ -1,6 +1,17 @@
-import { useEffect, useMemo, useRef } from "react";
-import { Dimensions, PanResponder, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { apiClient } from "@/src/network/apiClient";
+import { getStoredSessionTokens } from "@/src/auth/secureTokens";
 
 export type LocationSheetDetails = {
   id: string;
@@ -23,7 +34,11 @@ type LocationBottomSheetProps = {
   loading: boolean;
   details: LocationSheetDetails | null;
   onDismiss: () => void;
+  onReportSubmitted?: () => void;
 };
+
+const REPORT_LEVELS = ["none", "low", "medium", "high", "unknown"] as const;
+type ReportLevel = (typeof REPORT_LEVELS)[number];
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const SHEET_HEIGHT = Math.max(Math.round(SCREEN_HEIGHT * 0.9), 420);
@@ -52,10 +67,21 @@ export function LocationBottomSheet({
   loading,
   details,
   onDismiss,
+  onReportSubmitted,
 }: LocationBottomSheetProps) {
   const translateY = useSharedValue(CLOSE_POSITION);
   const startYRef = useRef(SNAP_50);
   const isClosingRef = useRef(false);
+  const [waitTimeMinutes, setWaitTimeMinutes] = useState("");
+  const [level, setLevel] = useState<ReportLevel>("medium");
+  const [notes, setNotes] = useState("");
+  const [reportState, setReportState] = useState<{
+    status: "idle" | "submitting" | "success" | "error";
+    message: string;
+  }>({
+    status: "idle",
+    message: "",
+  });
 
   useEffect(() => {
     if (visible) {
@@ -67,6 +93,20 @@ export function LocationBottomSheet({
     startYRef.current = CLOSE_POSITION;
     translateY.value = withTiming(CLOSE_POSITION, { duration: 180 });
   }, [translateY, visible]);
+
+  useEffect(() => {
+    if (!visible || !details?.id) {
+      return;
+    }
+
+    setWaitTimeMinutes("");
+    setLevel("medium");
+    setNotes("");
+    setReportState({
+      status: "idle",
+      message: "",
+    });
+  }, [details?.id, visible]);
 
   const panResponder = useMemo(
     () =>
@@ -109,6 +149,77 @@ export function LocationBottomSheet({
   if (!visible) {
     return null;
   }
+
+  const handleSubmitReport = async () => {
+    if (!details?.id) {
+      return;
+    }
+
+    const stored = await getStoredSessionTokens();
+    if (!stored.accessToken) {
+      setReportState({
+        status: "error",
+        message: "Sign in support has not been configured on this build yet.",
+      });
+      return;
+    }
+
+    const parsedWait = waitTimeMinutes.trim() ? Number(waitTimeMinutes.trim()) : undefined;
+    if (parsedWait !== undefined && (!Number.isFinite(parsedWait) || parsedWait < 0)) {
+      setReportState({
+        status: "error",
+        message: "Wait time must be a valid positive number.",
+      });
+      return;
+    }
+
+    setReportState({
+      status: "submitting",
+      message: "",
+    });
+
+    try {
+      await apiClient.post(
+        "/queues/report",
+        {
+          locationId: details.id,
+          waitTimeMinutes: parsedWait,
+          level,
+          notes: notes.trim() || undefined,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${stored.accessToken}`,
+            ...(stored.deviceId ? { "x-device-id": stored.deviceId } : {}),
+          },
+        }
+      );
+
+      setReportState({
+        status: "success",
+        message: "Queue report submitted.",
+      });
+      onReportSubmitted?.();
+    } catch (error) {
+      const status = typeof error === "object" && error && "response" in error
+        ? (error as { response?: { status?: number } }).response?.status
+        : undefined;
+
+      const message =
+        status === 401
+          ? "Your session is not authorized for reporting yet."
+          : status === 404
+            ? "Reporting endpoint is not available on this backend yet."
+            : error instanceof Error
+              ? error.message
+              : "Unable to submit queue report right now.";
+
+      setReportState({
+        status: "error",
+        message,
+      });
+    }
+  };
 
   return (
     <Animated.View style={[styles.container, animatedStyle]} {...panResponder.panHandlers}>
