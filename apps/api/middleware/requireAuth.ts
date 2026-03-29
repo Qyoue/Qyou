@@ -16,8 +16,7 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
   }
 
   try {
-    const token = authorization.replace('Bearer ', '').trim();
-    const payload = verifyAccessToken(token);
+    const payload = verifyAccessToken(authorization.replace('Bearer ', '').trim());
     (req as AuthenticatedRequest).auth = {
       userId: payload.sub,
       role: payload.role,

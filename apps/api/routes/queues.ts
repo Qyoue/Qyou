@@ -12,12 +12,7 @@ router.post('/report', requireAuth, async (req, res) => {
     userId: authReq.auth.userId,
     waitTimeMinutes:
       req.body?.waitTimeMinutes === undefined ? undefined : Number(req.body.waitTimeMinutes),
-    level: String(req.body?.level || 'unknown') as
-      | 'none'
-      | 'low'
-      | 'medium'
-      | 'high'
-      | 'unknown',
+    level: String(req.body?.level || 'unknown') as 'none' | 'low' | 'medium' | 'high' | 'unknown',
     notes: req.body?.notes,
   });
 
@@ -30,10 +25,9 @@ router.post('/report', requireAuth, async (req, res) => {
         id: String(report._id),
         locationId: String(report.locationId),
         userId: String(report.userId),
-        waitTimeMinutes: report.waitTimeMinutes,
         level: report.level,
+        waitTimeMinutes: report.waitTimeMinutes,
         notes: report.notes,
-        status: report.status,
         reportedAt: report.reportedAt,
       },
       snapshot,

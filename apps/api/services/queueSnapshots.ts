@@ -1,15 +1,16 @@
-import { QueueReport } from '../models/QueueReport';
+import { QueueReport, QueueReportDocument } from '../models/QueueReport';
 
 export const buildQueueSnapshotForLocation = async (locationId: string) => {
-  const items = await QueueReport.find({
+  const reports = (await QueueReport.find({
     locationId,
     status: 'accepted',
   })
     .sort({ reportedAt: -1 })
     .limit(10)
-    .lean();
+    .lean()) as QueueReportDocument[];
 
-  if (items.length === 0) {
+  const latest = reports[0];
+  if (!latest) {
     return {
       locationId,
       level: 'unknown' as const,
@@ -21,28 +22,19 @@ export const buildQueueSnapshotForLocation = async (locationId: string) => {
     };
   }
 
-  const latest = items[0];
-  const waitSamples = items
+  const waits = reports
     .map((item) => item.waitTimeMinutes)
     .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
-
-  const estimatedWaitMinutes =
-    waitSamples.length > 0
-      ? Math.round(waitSamples.reduce((sum, value) => sum + value, 0) / waitSamples.length)
-      : undefined;
-
-  const ageMs = Date.now() - latest.reportedAt.getTime();
-  const isStale = ageMs > 30 * 60 * 1000;
-  const confidence = Math.min(1, items.length / 5);
 
   return {
     locationId,
     level: latest.level,
-    estimatedWaitMinutes,
-    reportCount: items.length,
-    confidence: Number(confidence.toFixed(2)),
+    estimatedWaitMinutes:
+      waits.length > 0 ? Math.round(waits.reduce((sum, value) => sum + value, 0) / waits.length) : undefined,
+    reportCount: reports.length,
+    confidence: Number(Math.min(1, reports.length / 5).toFixed(2)),
     lastUpdatedAt: latest.reportedAt,
-    isStale,
+    isStale: Date.now() - latest.reportedAt.getTime() > 30 * 60 * 1000,
   };
 };
 

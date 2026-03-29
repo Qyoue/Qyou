@@ -31,8 +31,7 @@ const signToken = (
   payload: AccessPayload | RefreshPayload,
   secret: string,
   expiresIn: jwt.SignOptions['expiresIn'],
-) =>
-  jwt.sign(payload, secret, { expiresIn });
+) => jwt.sign(payload, secret, { expiresIn });
 
 export const hashToken = (token: string): string =>
   crypto.createHash('sha256').update(token).digest('hex');
@@ -84,24 +83,8 @@ export const verifyAccessToken = (token: string): AccessPayload => {
     }
     return payload;
   } catch (error) {
-    if (error instanceof AuthError) {
-      throw error;
-    }
+    if (error instanceof AuthError) throw error;
     throw new AuthError('Invalid or expired access token');
   }
 };
 
-export const verifyRefreshToken = (token: string): RefreshPayload => {
-  try {
-    const payload = jwt.verify(token, readSecret('JWT_REFRESH_SECRET')) as RefreshPayload;
-    if (payload.type !== 'refresh') {
-      throw new AuthError('Invalid token type');
-    }
-    return payload;
-  } catch (error) {
-    if (error instanceof AuthError) {
-      throw error;
-    }
-    throw new AuthError('Invalid or expired refresh token');
-  }
-};

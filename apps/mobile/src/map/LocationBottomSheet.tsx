@@ -1,6 +1,17 @@
-import { useEffect, useMemo, useRef } from "react";
-import { Dimensions, PanResponder, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { apiClient } from "@/src/network/apiClient";
+import { getStoredSessionTokens } from "@/src/auth/secureTokens";
 
 export type LocationSheetDetails = {
   id: string;
@@ -9,6 +20,13 @@ export type LocationSheetDetails = {
   address: string;
   status?: string;
   distanceFromUser?: number;
+  queueSnapshot?: {
+    level?: string;
+    estimatedWaitMinutes?: number;
+    confidence?: number;
+    lastUpdatedAt?: string | null;
+    isStale?: boolean;
+  };
 };
 
 type LocationBottomSheetProps = {
@@ -16,7 +34,11 @@ type LocationBottomSheetProps = {
   loading: boolean;
   details: LocationSheetDetails | null;
   onDismiss: () => void;
+  onReportSubmitted?: () => void;
 };
+
+const REPORT_LEVELS = ["none", "low", "medium", "high", "unknown"] as const;
+type ReportLevel = (typeof REPORT_LEVELS)[number];
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const SHEET_HEIGHT = Math.max(Math.round(SCREEN_HEIGHT * 0.9), 420);
@@ -45,10 +67,21 @@ export function LocationBottomSheet({
   loading,
   details,
   onDismiss,
+  onReportSubmitted,
 }: LocationBottomSheetProps) {
   const translateY = useSharedValue(CLOSE_POSITION);
   const startYRef = useRef(SNAP_50);
   const isClosingRef = useRef(false);
+  const [waitTimeMinutes, setWaitTimeMinutes] = useState("");
+  const [level, setLevel] = useState<ReportLevel>("medium");
+  const [notes, setNotes] = useState("");
+  const [reportState, setReportState] = useState<{
+    status: "idle" | "submitting" | "success" | "error";
+    message: string;
+  }>({
+    status: "idle",
+    message: "",
+  });
 
   useEffect(() => {
     if (visible) {
@@ -60,6 +93,20 @@ export function LocationBottomSheet({
     startYRef.current = CLOSE_POSITION;
     translateY.value = withTiming(CLOSE_POSITION, { duration: 180 });
   }, [translateY, visible]);
+
+  useEffect(() => {
+    if (!visible || !details?.id) {
+      return;
+    }
+
+    setWaitTimeMinutes("");
+    setLevel("medium");
+    setNotes("");
+    setReportState({
+      status: "idle",
+      message: "",
+    });
+  }, [details?.id, visible]);
 
   const panResponder = useMemo(
     () =>
@@ -103,6 +150,77 @@ export function LocationBottomSheet({
     return null;
   }
 
+  const handleSubmitReport = async () => {
+    if (!details?.id) {
+      return;
+    }
+
+    const stored = await getStoredSessionTokens();
+    if (!stored.accessToken) {
+      setReportState({
+        status: "error",
+        message: "Sign in support has not been configured on this build yet.",
+      });
+      return;
+    }
+
+    const parsedWait = waitTimeMinutes.trim() ? Number(waitTimeMinutes.trim()) : undefined;
+    if (parsedWait !== undefined && (!Number.isFinite(parsedWait) || parsedWait < 0)) {
+      setReportState({
+        status: "error",
+        message: "Wait time must be a valid positive number.",
+      });
+      return;
+    }
+
+    setReportState({
+      status: "submitting",
+      message: "",
+    });
+
+    try {
+      await apiClient.post(
+        "/queues/report",
+        {
+          locationId: details.id,
+          waitTimeMinutes: parsedWait,
+          level,
+          notes: notes.trim() || undefined,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${stored.accessToken}`,
+            ...(stored.deviceId ? { "x-device-id": stored.deviceId } : {}),
+          },
+        }
+      );
+
+      setReportState({
+        status: "success",
+        message: "Queue report submitted.",
+      });
+      onReportSubmitted?.();
+    } catch (error) {
+      const status = typeof error === "object" && error && "response" in error
+        ? (error as { response?: { status?: number } }).response?.status
+        : undefined;
+
+      const message =
+        status === 401
+          ? "Your session is not authorized for reporting yet."
+          : status === 404
+            ? "Reporting endpoint is not available on this backend yet."
+            : error instanceof Error
+              ? error.message
+              : "Unable to submit queue report right now.";
+
+      setReportState({
+        status: "error",
+        message,
+      });
+    }
+  };
+
   return (
     <Animated.View style={[styles.container, animatedStyle]} {...panResponder.panHandlers}>
       <View style={styles.handle} />
@@ -117,6 +235,30 @@ export function LocationBottomSheet({
             <Text style={styles.row}>Distance: {details.distanceFromUser.toFixed(0)} m</Text>
           ) : null}
           {details.status ? <Text style={styles.row}>Status: {details.status}</Text> : null}
+          <View style={styles.snapshotCard}>
+            <Text style={styles.snapshotTitle}>Live queue signal</Text>
+            <Text style={styles.snapshotMetric}>
+              Level: {details.queueSnapshot?.level || "unknown"}
+            </Text>
+            <Text style={styles.snapshotMetric}>
+              Wait: {typeof details.queueSnapshot?.estimatedWaitMinutes === "number"
+                ? `${details.queueSnapshot.estimatedWaitMinutes} min`
+                : "No estimate yet"}
+            </Text>
+            <Text style={styles.snapshotMetric}>
+              Confidence: {typeof details.queueSnapshot?.confidence === "number"
+                ? `${Math.round(details.queueSnapshot.confidence * 100)}%`
+                : "Unavailable"}
+            </Text>
+            <Text style={styles.snapshotBadge}>
+              {details.queueSnapshot?.isStale ? "Freshness: stale" : "Freshness: active"}
+            </Text>
+            <Text style={styles.snapshotMeta}>
+              {details.queueSnapshot?.lastUpdatedAt
+                ? `Updated ${new Date(details.queueSnapshot.lastUpdatedAt).toLocaleTimeString()}`
+                : "No recent crowd updates"}
+            </Text>
+          </View>
         </View>
       ) : (
         <Text style={styles.loadingText}>No location selected.</Text>
@@ -170,6 +312,39 @@ const styles = StyleSheet.create({
     color: "#dce7f0",
     fontSize: 14,
     marginBottom: 6,
+  },
+  snapshotCard: {
+    marginTop: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(142, 198, 255, 0.24)",
+    backgroundColor: "rgba(14, 22, 31, 0.72)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  snapshotTitle: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  snapshotMetric: {
+    color: "#dce7f0",
+    fontSize: 13,
+    marginBottom: 4,
+    textTransform: "capitalize",
+  },
+  snapshotBadge: {
+    color: "#9fe3ff",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 4,
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  snapshotMeta: {
+    color: "#87a1b8",
+    fontSize: 12,
   },
   hint: {
     marginTop: 14,

@@ -5,8 +5,6 @@ import { QueueReport, QueueReportDocument, QueueReportLevel } from '../models/Qu
 import { User } from '../models/User';
 
 const DUPLICATE_COOLDOWN_MINUTES = 5;
-const MAX_WAIT_MINUTES = 1440;
-const MAX_NOTES_LENGTH = 280;
 
 type CreateQueueReportInput = {
   locationId: string;
@@ -14,17 +12,13 @@ type CreateQueueReportInput = {
   waitTimeMinutes?: number;
   level: QueueReportLevel;
   notes?: string;
-  reportedAt?: Date;
 };
 
 const isObjectId = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
 
-const normalizeNotes = (value: unknown) => {
-  const next = String(value || '').trim();
-  return next || undefined;
-};
-
-const validateQueueReportPayload = async (input: CreateQueueReportInput) => {
+export const createQueueReport = async (
+  input: CreateQueueReportInput,
+): Promise<QueueReportDocument> => {
   if (!isObjectId(input.locationId)) {
     throw new ValidationError('locationId must be a valid location identifier');
   }
@@ -33,16 +27,6 @@ const validateQueueReportPayload = async (input: CreateQueueReportInput) => {
   }
   if (!['none', 'low', 'medium', 'high', 'unknown'].includes(input.level)) {
     throw new ValidationError('level must be one of: none, low, medium, high, unknown');
-  }
-  if (input.waitTimeMinutes !== undefined) {
-    if (!Number.isFinite(input.waitTimeMinutes) || input.waitTimeMinutes < 0 || input.waitTimeMinutes > MAX_WAIT_MINUTES) {
-      throw new ValidationError(`waitTimeMinutes must be between 0 and ${MAX_WAIT_MINUTES}`);
-    }
-  }
-
-  const notes = normalizeNotes(input.notes);
-  if (notes && notes.length > MAX_NOTES_LENGTH) {
-    throw new ValidationError(`notes must be ${MAX_NOTES_LENGTH} characters or less`);
   }
 
   const [location, user] = await Promise.all([
@@ -53,69 +37,32 @@ const validateQueueReportPayload = async (input: CreateQueueReportInput) => {
   if (!location || location.status !== 'active') {
     throw new ValidationError('locationId must reference an active location');
   }
-
   if (!user) {
     throw new ValidationError('userId must reference an existing user');
   }
 
-  return {
-    locationId: new Types.ObjectId(input.locationId),
-    userId: new Types.ObjectId(input.userId),
-    waitTimeMinutes: input.waitTimeMinutes,
-    level: input.level,
-    notes,
-    reportedAt: input.reportedAt || new Date(),
-  };
-};
+  const reportedAt = new Date();
+  const since = new Date(reportedAt.getTime() - DUPLICATE_COOLDOWN_MINUTES * 60 * 1000);
 
-const findRecentDuplicate = async (params: {
-  locationId: string;
-  userId: string;
-  reportedAt: Date;
-}) => {
-  const since = new Date(params.reportedAt.getTime() - DUPLICATE_COOLDOWN_MINUTES * 60 * 1000);
-
-  return QueueReport.findOne({
-    locationId: params.locationId,
-    userId: params.userId,
-    status: 'accepted',
-    reportedAt: {
-      $gte: since,
-      $lte: params.reportedAt,
-    },
-  })
-    .sort({ reportedAt: -1 })
-    .lean();
-};
-
-export const createQueueReport = async (
-  input: CreateQueueReportInput,
-): Promise<QueueReportDocument> => {
-  const validated = await validateQueueReportPayload(input);
-  const duplicate = await findRecentDuplicate({
+  const duplicate = await QueueReport.findOne({
     locationId: input.locationId,
     userId: input.userId,
-    reportedAt: validated.reportedAt,
-  });
+    status: 'accepted',
+    reportedAt: { $gte: since, $lte: reportedAt },
+  }).lean();
 
   if (duplicate) {
     throw new ValidationError('A recent queue report already exists for this user and location');
   }
 
   return QueueReport.create({
-    locationId: validated.locationId,
-    userId: validated.userId,
-    waitTimeMinutes: validated.waitTimeMinutes,
-    level: validated.level,
-    notes: validated.notes,
+    locationId: new Types.ObjectId(input.locationId),
+    userId: new Types.ObjectId(input.userId),
+    waitTimeMinutes: input.waitTimeMinutes,
+    level: input.level,
+    notes: input.notes,
     status: 'accepted',
-    reportedAt: validated.reportedAt,
+    reportedAt,
   });
 };
-
-export const QUEUE_REPORT_RULES = {
-  duplicateCooldownMinutes: DUPLICATE_COOLDOWN_MINUTES,
-  maxWaitMinutes: MAX_WAIT_MINUTES,
-  maxNotesLength: MAX_NOTES_LENGTH,
-} as const;
 
