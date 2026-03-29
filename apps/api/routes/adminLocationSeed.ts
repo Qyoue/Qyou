@@ -3,6 +3,7 @@ import { ValidationError } from '../errors/AppError';
 import { parseEnum, requireString } from '../lib/validation';
 import { requireAdmin } from '../middleware/adminAuth';
 import { Location } from '../models/Location';
+import { recordAuditEvent } from '../services/auditLog';
 import { seedLocationsFromProvider } from '../services/placeSeed';
 
 const router = Router();
@@ -84,47 +85,89 @@ router.get('/locations', requireAdmin, async (req, res) => {
 
 router.post('/locations/seed', requireAdmin, async (req, res) => {
   const result = await seedLocationsFromProvider(req.body || {});
+
+  const authorization = req.headers.authorization || '';
+  const actorRole = authorization.startsWith('Bearer ') ? 'ADMIN' : undefined;
+
+  await recordAuditEvent({
+    action: 'ADMIN_LOCATION_SEED',
+    actorRole,
+    targetType: 'location-seed-job',
+    metadata: {
+      provider: result.provider,
+      fetched: result.fetched,
+      inserted: result.inserted,
+      updated: result.updated,
+      durationMs: result.durationMs,
+    },
+    req,
+  });
+
   res.json({
     success: true,
     data: result,
   });
 });
 
-router.post('/locations', requireAdmin, async (req, res) => {
-  const name = String(req.body?.name || '').trim();
-  const type = String(req.body?.type || '').trim();
-  const address = String(req.body?.address || '').trim();
-  const latitude = Number(req.body?.latitude);
-  const longitude = Number(req.body?.longitude);
-
-  if (!name || name.length < 2) {
-    throw new ValidationError('name must be at least 2 characters');
-  }
-  if (!['bank', 'hospital', 'atm', 'government', 'fuel_station', 'other'].includes(type)) {
-    throw new ValidationError('type must be one of: bank, hospital, atm, government, fuel_station, other');
-  }
-  if (!address || address.length < 5) {
-    throw new ValidationError('address must be at least 5 characters');
-  }
-  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-    throw new ValidationError('latitude must be between -90 and 90');
-  }
-  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    throw new ValidationError('longitude must be between -180 and 180');
+router.patch('/locations/:id', requireAdmin, async (req, res) => {
+  const id = String(req.params.id || '');
+  if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+    throw new ValidationError('id must be a valid location identifier');
   }
 
-  const location = await Location.create({
-    name,
-    type,
-    address,
-    status: 'active',
-    location: {
+  const updates: Record<string, unknown> = {};
+  if (req.body?.name !== undefined) {
+    const name = String(req.body.name).trim();
+    if (name.length < 2) {
+      throw new ValidationError('name must be at least 2 characters');
+    }
+    updates.name = name;
+  }
+  if (req.body?.address !== undefined) {
+    const address = String(req.body.address).trim();
+    if (address.length < 5) {
+      throw new ValidationError('address must be at least 5 characters');
+    }
+    updates.address = address;
+  }
+  if (req.body?.type !== undefined) {
+    const type = String(req.body.type).trim();
+    if (!['bank', 'hospital', 'atm', 'government', 'fuel_station', 'other'].includes(type)) {
+      throw new ValidationError('type must be one of: bank, hospital, atm, government, fuel_station, other');
+    }
+    updates.type = type;
+  }
+  if (req.body?.status !== undefined) {
+    const status = String(req.body.status).trim();
+    if (!['active', 'inactive'].includes(status)) {
+      throw new ValidationError('status must be either active or inactive');
+    }
+    updates.status = status;
+  }
+
+  const latitude = req.body?.latitude;
+  const longitude = req.body?.longitude;
+  if (latitude !== undefined || longitude !== undefined) {
+    const parsedLat = Number(latitude);
+    const parsedLng = Number(longitude);
+    if (!Number.isFinite(parsedLat) || parsedLat < -90 || parsedLat > 90) {
+      throw new ValidationError('latitude must be between -90 and 90');
+    }
+    if (!Number.isFinite(parsedLng) || parsedLng < -180 || parsedLng > 180) {
+      throw new ValidationError('longitude must be between -180 and 180');
+    }
+    updates.location = {
       type: 'Point',
-      coordinates: [longitude, latitude],
-    },
-  });
+      coordinates: [parsedLng, parsedLat],
+    };
+  }
 
-  res.status(201).json({
+  const location = await Location.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
+  if (!location) {
+    throw new ValidationError('Location not found');
+  }
+
+  res.json({
     success: true,
     data: {
       item: {
@@ -133,7 +176,7 @@ router.post('/locations', requireAdmin, async (req, res) => {
         type: location.type,
         status: location.status,
         address: location.address,
-        coordinates: location.location.coordinates,
+        coordinates: location.location?.coordinates || null,
         createdAt: location.createdAt,
         updatedAt: location.updatedAt,
       },
