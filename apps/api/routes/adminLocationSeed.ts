@@ -109,50 +109,6 @@ router.post('/locations/seed', requireAdmin, async (req, res) => {
   });
 });
 
-router.post('/locations', requireAdmin, async (req, res) => {
-  const name = String(req.body?.name || '').trim();
-  const type = String(req.body?.type || '').trim();
-  const address = String(req.body?.address || '').trim();
-  const latitude = Number(req.body?.latitude);
-  const longitude = Number(req.body?.longitude);
-
-  if (!name || name.length < 2) {
-    throw new ValidationError('name must be at least 2 characters');
-  }
-  if (!['bank', 'hospital', 'atm', 'government', 'fuel_station', 'other'].includes(type)) {
-    throw new ValidationError('type must be one of: bank, hospital, atm, government, fuel_station, other');
-  }
-  if (!address || address.length < 5) {
-    throw new ValidationError('address must be at least 5 characters');
-  }
-  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-    throw new ValidationError('latitude must be between -90 and 90');
-  }
-  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    throw new ValidationError('longitude must be between -180 and 180');
-  }
-
-  const location = await Location.create({
-    name,
-    type,
-    address,
-    status: 'active',
-    location: {
-      type: 'Point',
-      coordinates: [longitude, latitude],
-    },
-  });
-
-  res.status(201).json({
-    success: true,
-    data: {
-      item: {
-        id: String(location._id),
-      },
-    },
-  });
-});
-
 router.patch('/locations/:id', requireAdmin, async (req, res) => {
   const id = String(req.params.id || '');
   if (!/^[a-fA-F0-9]{24}$/.test(id)) {
@@ -160,6 +116,27 @@ router.patch('/locations/:id', requireAdmin, async (req, res) => {
   }
 
   const updates: Record<string, unknown> = {};
+  if (req.body?.name !== undefined) {
+    const name = String(req.body.name).trim();
+    if (name.length < 2) {
+      throw new ValidationError('name must be at least 2 characters');
+    }
+    updates.name = name;
+  }
+  if (req.body?.address !== undefined) {
+    const address = String(req.body.address).trim();
+    if (address.length < 5) {
+      throw new ValidationError('address must be at least 5 characters');
+    }
+    updates.address = address;
+  }
+  if (req.body?.type !== undefined) {
+    const type = String(req.body.type).trim();
+    if (!['bank', 'hospital', 'atm', 'government', 'fuel_station', 'other'].includes(type)) {
+      throw new ValidationError('type must be one of: bank, hospital, atm, government, fuel_station, other');
+    }
+    updates.type = type;
+  }
   if (req.body?.status !== undefined) {
     const status = String(req.body.status).trim();
     if (!['active', 'inactive'].includes(status)) {
@@ -167,8 +144,22 @@ router.patch('/locations/:id', requireAdmin, async (req, res) => {
     }
     updates.status = status;
   }
-  if (req.body?.name !== undefined) {
-    updates.name = String(req.body.name).trim();
+
+  const latitude = req.body?.latitude;
+  const longitude = req.body?.longitude;
+  if (latitude !== undefined || longitude !== undefined) {
+    const parsedLat = Number(latitude);
+    const parsedLng = Number(longitude);
+    if (!Number.isFinite(parsedLat) || parsedLat < -90 || parsedLat > 90) {
+      throw new ValidationError('latitude must be between -90 and 90');
+    }
+    if (!Number.isFinite(parsedLng) || parsedLng < -180 || parsedLng > 180) {
+      throw new ValidationError('longitude must be between -180 and 180');
+    }
+    updates.location = {
+      type: 'Point',
+      coordinates: [parsedLng, parsedLat],
+    };
   }
 
   const location = await Location.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
@@ -181,8 +172,13 @@ router.patch('/locations/:id', requireAdmin, async (req, res) => {
     data: {
       item: {
         id: String(location._id),
-        status: location.status,
         name: location.name,
+        type: location.type,
+        status: location.status,
+        address: location.address,
+        coordinates: location.location?.coordinates || null,
+        createdAt: location.createdAt,
+        updatedAt: location.updatedAt,
       },
     },
   });
