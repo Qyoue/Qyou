@@ -8,11 +8,13 @@ import { AuthError } from './errors/AppError';
 import { logger } from './logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
+import { queueReportRateLimit } from './middleware/rateLimit';
 import { ensureLocationIndexes } from './models/Location';
+import { adminAuditLogsRouter } from './routes/adminAuditLogs';
 import { adminLocationSeedRouter } from './routes/adminLocationSeed';
 import { locationsRouter } from './routes/locations';
 import { authRouter } from './routes/auth';
-import { usersRouter } from './routes/users';
+import { queuesRouter } from './routes/queues';
 import { shutdownLocationCache } from './services/locationCache';
 
 const app = express();
@@ -24,7 +26,9 @@ app.use(express.json());
 app.use('/auth', authRouter);
 app.use('/users', usersRouter);
 app.use('/admin', adminLocationSeedRouter);
+app.use('/admin', adminAuditLogsRouter);
 app.use('/locations', locationsRouter);
+app.use('/queues', queuesRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'Qyou API', timestamp: new Date() });
@@ -45,8 +49,10 @@ app.use(errorHandler);
 const connectDB = async () => {
   await mongoose.connect(MONGO_URI);
   await ensureLocationIndexes();
+  await ensureQueueReportIndexes();
   logger.info('MongoDB connected');
   logger.info('Location 2dsphere index ensured');
+  logger.info('Queue report indexes ensured');
 };
 
 const server = app.listen(PORT, async () => {
