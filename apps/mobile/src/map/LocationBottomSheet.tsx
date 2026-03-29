@@ -9,6 +9,13 @@ export type LocationSheetDetails = {
   address: string;
   status?: string;
   distanceFromUser?: number;
+  queueSnapshot?: {
+    level?: string;
+    estimatedWaitMinutes?: number;
+    confidence?: number;
+    lastUpdatedAt?: string | null;
+    isStale?: boolean;
+  };
 };
 
 type LocationBottomSheetProps = {
@@ -117,6 +124,30 @@ export function LocationBottomSheet({
             <Text style={styles.row}>Distance: {details.distanceFromUser.toFixed(0)} m</Text>
           ) : null}
           {details.status ? <Text style={styles.row}>Status: {details.status}</Text> : null}
+          <View style={styles.snapshotCard}>
+            <Text style={styles.snapshotTitle}>Live queue signal</Text>
+            <Text style={styles.snapshotMetric}>
+              Level: {details.queueSnapshot?.level || "unknown"}
+            </Text>
+            <Text style={styles.snapshotMetric}>
+              Wait: {typeof details.queueSnapshot?.estimatedWaitMinutes === "number"
+                ? `${details.queueSnapshot.estimatedWaitMinutes} min`
+                : "No estimate yet"}
+            </Text>
+            <Text style={styles.snapshotMetric}>
+              Confidence: {typeof details.queueSnapshot?.confidence === "number"
+                ? `${Math.round(details.queueSnapshot.confidence * 100)}%`
+                : "Unavailable"}
+            </Text>
+            <Text style={styles.snapshotBadge}>
+              {details.queueSnapshot?.isStale ? "Freshness: stale" : "Freshness: active"}
+            </Text>
+            <Text style={styles.snapshotMeta}>
+              {details.queueSnapshot?.lastUpdatedAt
+                ? `Updated ${new Date(details.queueSnapshot.lastUpdatedAt).toLocaleTimeString()}`
+                : "No recent crowd updates"}
+            </Text>
+          </View>
         </View>
       ) : (
         <Text style={styles.loadingText}>No location selected.</Text>
@@ -170,6 +201,39 @@ const styles = StyleSheet.create({
     color: "#dce7f0",
     fontSize: 14,
     marginBottom: 6,
+  },
+  snapshotCard: {
+    marginTop: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(142, 198, 255, 0.24)",
+    backgroundColor: "rgba(14, 22, 31, 0.72)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  snapshotTitle: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  snapshotMetric: {
+    color: "#dce7f0",
+    fontSize: 13,
+    marginBottom: 4,
+    textTransform: "capitalize",
+  },
+  snapshotBadge: {
+    color: "#9fe3ff",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 4,
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  snapshotMeta: {
+    color: "#87a1b8",
+    fontSize: 12,
   },
   hint: {
     marginTop: 14,

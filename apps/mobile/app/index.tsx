@@ -21,6 +21,13 @@ type LocationDetailsResponse = {
       type?: string;
       address?: string;
       status?: string;
+      queueSnapshot?: {
+        level?: string;
+        estimatedWaitMinutes?: number;
+        confidence?: number;
+        lastUpdatedAt?: string | null;
+        isStale?: boolean;
+      };
     };
   };
 };
@@ -131,6 +138,7 @@ export default function Index() {
             address: item.address || fallback?.address || "No address available",
             status: item.status,
             distanceFromUser: fallback?.distanceFromUser,
+            queueSnapshot: item.queueSnapshot,
           });
           return;
         }
@@ -145,6 +153,7 @@ export default function Index() {
           type: fallback.type,
           address: fallback.address,
           distanceFromUser: fallback.distanceFromUser,
+          queueSnapshot: undefined,
         });
       }
     })().finally(() => {
