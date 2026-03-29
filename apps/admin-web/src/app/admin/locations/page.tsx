@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import LocationsDataGrid, { GridRow } from "@/components/admin/LocationsDataGrid";
+import type { AdminLocationsListResponse } from "@/src/lib/api";
 
 type SearchParams = {
   page?: string;
@@ -8,27 +9,6 @@ type SearchParams = {
   dir?: string;
   search?: string;
   type?: string;
-};
-
-type BackendResponse = {
-  success: boolean;
-  data?: {
-    rows: GridRow[];
-    pagination: {
-      page: number;
-      pageSize: number;
-      total: number;
-      totalPages: number;
-    };
-    sort: {
-      field: string;
-      direction: "asc" | "desc";
-    };
-    filters: {
-      search: string | null;
-      type: string | null;
-    };
-  };
 };
 
 const toPositiveInt = (value: string | undefined, fallback: number) => {
@@ -75,7 +55,7 @@ export default async function AdminLocationsPage(props: {
     });
 
     if (response.ok) {
-      const payload = (await response.json()) as BackendResponse;
+      const payload = (await response.json()) as AdminLocationsListResponse;
       rows = payload.data?.rows || [];
       total = payload.data?.pagination.total || 0;
       totalPages = payload.data?.pagination.totalPages || 1;
