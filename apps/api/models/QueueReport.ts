@@ -9,6 +9,7 @@ export interface QueueReportDocument {
   waitTimeMinutes?: number;
   level: QueueReportLevel;
   notes?: string;
+  status: 'accepted' | 'rejected';
   status: QueueReportStatus;
   rejectionReason?: string;
   reportedAt: Date;
@@ -68,8 +69,6 @@ const queueReportSchema = new Schema<QueueReportDocument>(
     timestamps: true,
   },
 );
-
-queueReportSchema.index({ locationId: 1, reportedAt: -1 }, { name: 'location_reported_at_desc' });
 queueReportSchema.index({ userId: 1, reportedAt: -1 }, { name: 'user_reported_at_desc' });
 queueReportSchema.index(
   { locationId: 1, userId: 1, reportedAt: -1 },

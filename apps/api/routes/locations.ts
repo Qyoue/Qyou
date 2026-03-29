@@ -3,6 +3,7 @@ import { ValidationError } from '../errors/AppError';
 import { optionalEnum, parseFiniteNumber, parseIntegerInRange } from '../lib/validation';
 import { LocationType, Location } from '../models/Location';
 import { cacheLocations, getNearbyFromCache } from '../services/locationCache';
+import { buildQueueSnapshotForLocation } from '../services/queueSnapshots';
 
 const router = Router();
 
@@ -62,12 +63,20 @@ router.get('/nearby', async (req, res) => {
   });
 
   if (cached) {
+    const snapshotEntries = await Promise.all(
+      cached.map(async (item) => [item.id, await buildQueueSnapshotForLocation(item.id)] as const),
+    );
+    const snapshots = Object.fromEntries(snapshotEntries);
+
     return res.json({
       success: true,
       data: {
         source: 'redis',
         count: cached.length,
-        items: cached,
+        items: cached.map((item) => ({
+          ...item,
+          queueSnapshot: snapshots[item.id],
+        })),
       },
     });
   }
@@ -117,12 +126,20 @@ router.get('/nearby', async (req, res) => {
     })),
   );
 
+  const snapshotEntries = await Promise.all(
+    locations.map(async (item) => [String(item._id), await buildQueueSnapshotForLocation(String(item._id))] as const),
+  );
+  const snapshots = Object.fromEntries(snapshotEntries);
+
   res.json({
     success: true,
     data: {
       source: 'mongodb',
       count: locations.length,
-      items: locations,
+      items: locations.map((item) => ({
+        ...item,
+        queueSnapshot: snapshots[String(item._id)],
+      })),
     },
   });
 });
@@ -291,10 +308,15 @@ router.get('/:id', async (req, res) => {
     });
   }
 
+  const snapshot = await buildQueueSnapshotForLocation(id);
+
   return res.json({
     success: true,
     data: {
-      item: location,
+      item: {
+        ...location,
+        queueSnapshot: snapshot,
+      },
     },
   });
 });
