@@ -10,6 +10,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
 import { requestMetricsMiddleware } from './middleware/observability';
 import { ensureLocationIndexes } from './models/Location';
+import { adminAuditLogsRouter } from './routes/adminAuditLogs';
 import { adminLocationSeedRouter } from './routes/adminLocationSeed';
 import { locationsRouter } from './routes/locations';
 import { authRouter } from './routes/auth';
@@ -27,6 +28,7 @@ app.use('/auth', authRouter);
 app.use('/admin', adminLocationSeedRouter);
 app.use('/internal', internalMetricsRouter);
 app.use('/locations', locationsRouter);
+app.use('/queues', queuesRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'Qyou API', timestamp: new Date() });
@@ -47,8 +49,10 @@ app.use(errorHandler);
 const connectDB = async () => {
   await mongoose.connect(MONGO_URI);
   await ensureLocationIndexes();
+  await ensureQueueReportIndexes();
   logger.info('MongoDB connected');
   logger.info('Location 2dsphere index ensured');
+  logger.info('Queue report indexes ensured');
 };
 
 const server = app.listen(PORT, async () => {
