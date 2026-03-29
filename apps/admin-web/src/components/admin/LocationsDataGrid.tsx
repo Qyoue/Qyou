@@ -77,6 +77,15 @@ export default function LocationsDataGrid(props: GridProps) {
         cell: ({ row }) =>
           row.original.createdAt ? new Date(row.original.createdAt).toLocaleString() : "-",
       },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => (
+          <Link className={styles.thButton} href={`/admin/locations/${row.original.id}`}>
+            Edit
+          </Link>
+        ),
+      },
     ],
     []
   );

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Linking, StyleSheet, Text, View, useColorScheme } from "react-native";
 import { Link } from "expo-router";
+import { Button, Linking, Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { router } from "expo-router";
 import MapView, { Marker, Region } from "react-native-maps";
 import { darkMapStyle, lightMapStyle } from "@/src/map/mapStyles";
 import { getBoundingBoxFromRegion } from "@/src/map/mapBounds";
@@ -10,7 +12,9 @@ import { useBoundingBoxPolling } from "@/src/polling/useBoundingBoxPolling";
 import { useLocationsStore } from "@/src/store/locationsStore";
 import { getExpansionRegionForCluster, useMapClusters } from "@/src/map/useMapClusters";
 import { apiClient } from "@/src/network/apiClient";
+import type { LocationDetailsResponse } from "@/src/network/contracts";
 import { LocationBottomSheet, LocationSheetDetails } from "@/src/map/LocationBottomSheet";
+import { logoutSession } from "@/src/auth/authClient";
 
 type LocationDetailsResponse = {
   data?: {
@@ -20,6 +24,13 @@ type LocationDetailsResponse = {
       type?: string;
       address?: string;
       status?: string;
+      queueSnapshot?: {
+        level?: string;
+        estimatedWaitMinutes?: number;
+        confidence?: number;
+        lastUpdatedAt?: string | null;
+        isStale?: boolean;
+      };
     };
   };
 };
@@ -50,6 +61,7 @@ export default function Index() {
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<LocationSheetDetails | null>(null);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+  const [detailsRefreshKey, setDetailsRefreshKey] = useState(0);
 
   const customMapStyle = useMemo(
     () => (colorScheme === "dark" ? darkMapStyle : lightMapStyle),
@@ -130,6 +142,7 @@ export default function Index() {
             address: item.address || fallback?.address || "No address available",
             status: item.status,
             distanceFromUser: fallback?.distanceFromUser,
+            queueSnapshot: item.queueSnapshot,
           });
           return;
         }
@@ -144,6 +157,7 @@ export default function Index() {
           type: fallback.type,
           address: fallback.address,
           distanceFromUser: fallback.distanceFromUser,
+          queueSnapshot: undefined,
         });
       }
     })().finally(() => {
@@ -155,7 +169,7 @@ export default function Index() {
     return () => {
       cancelled = true;
     };
-  }, [locationsById, selectedLocationId]);
+  }, [detailsRefreshKey, locationsById, selectedLocationId]);
   return (
     <View style={styles.container}>
       <MapView
@@ -219,9 +233,16 @@ export default function Index() {
         <Text style={styles.text}>
           Background hook: {backgroundTrackingPreparation.ready ? "ready" : "prepared"} ({backgroundTrackingPreparation.taskName})
         </Text>
-        <Link href="/profile" style={styles.profileLink}>
-          Open Profile
-        </Link>
+        <Pressable
+          onPress={() => {
+            void logoutSession().finally(() => {
+              router.replace("/login");
+            });
+          }}
+          style={styles.logoutButton}
+        >
+          <Text style={styles.logoutText}>Sign Out</Text>
+        </Pressable>
       </View>
 
       {(permissionStage === "needs-education" || permissionStage === "requesting") && (
@@ -263,6 +284,9 @@ export default function Index() {
         visible={Boolean(selectedLocationId)}
         loading={isDetailsLoading}
         details={selectedDetails}
+        onReportSubmitted={() => {
+          setDetailsRefreshKey((current) => current + 1);
+        }}
         onDismiss={() => {
           setSelectedLocationId(null);
         }}
@@ -287,6 +311,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.7)",
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  logoutButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    backgroundColor: "#183246",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  logoutText: {
+    color: "#d8ebf8",
+    fontSize: 13,
+    fontWeight: "700",
   },
   title: {
     color: "#ffffff",

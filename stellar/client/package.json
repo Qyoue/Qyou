@@ -9,7 +9,8 @@
   "scripts": {
     "build": "node ../../libs/config/validate-env.cjs stellar && tsc",
     "watch": "tsc -w",
-    "test-net": "node ../../libs/config/validate-env.cjs stellar && tsx src/test-wallet.ts"
+    "test-net": "node ../../libs/config/validate-env.cjs stellar && tsx src/test-wallet.ts",
+    "typecheck": "node ../../libs/config/validate-env.cjs stellar && tsc --noEmit"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^12.0.0",
