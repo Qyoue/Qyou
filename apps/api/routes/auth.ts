@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { Router } from 'express';
 import { AuthError, ValidationError } from '../errors/AppError';
+import { authRateLimit } from '../middleware/rateLimit';
 import { requireEmail, requireMinLength, requireString } from '../lib/validation';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth';
 import { Session } from '../models/Session';
@@ -17,6 +18,7 @@ import {
 
 const router = Router();
 
+router.use(authRateLimit);
 const readCurrentDeviceId = (req: { headers: Record<string, unknown>; body?: Record<string, unknown> }) => {
   const headerValue = req.headers['x-device-id'];
   const headerDeviceId =

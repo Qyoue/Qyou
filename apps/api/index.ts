@@ -8,6 +8,7 @@ import { AuthError } from './errors/AppError';
 import { logger } from './logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
+import { queueReportRateLimit } from './middleware/rateLimit';
 import { ensureLocationIndexes } from './models/Location';
 import { adminAuditLogsRouter } from './routes/adminAuditLogs';
 import { adminLocationSeedRouter } from './routes/adminLocationSeed';
