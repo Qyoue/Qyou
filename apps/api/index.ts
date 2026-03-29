@@ -47,8 +47,10 @@ app.use(errorHandler);
 const connectDB = async () => {
   await mongoose.connect(MONGO_URI);
   await ensureLocationIndexes();
+  await ensureQueueReportIndexes();
   logger.info('MongoDB connected');
   logger.info('Location 2dsphere index ensured');
+  logger.info('Queue report indexes ensured');
 };
 
 const server = app.listen(PORT, async () => {
