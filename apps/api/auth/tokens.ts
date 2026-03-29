@@ -76,6 +76,21 @@ export const issueTokenPair = (params: {
   };
 };
 
+export const verifyAccessToken = (token: string): AccessPayload => {
+  try {
+    const payload = jwt.verify(token, readSecret('JWT_ACCESS_SECRET')) as AccessPayload;
+    if (payload.type !== 'access') {
+      throw new AuthError('Invalid token type');
+    }
+    return payload;
+  } catch (error) {
+    if (error instanceof AuthError) {
+      throw error;
+    }
+    throw new AuthError('Invalid or expired access token');
+  }
+};
+
 export const verifyRefreshToken = (token: string): RefreshPayload => {
   try {
     const payload = jwt.verify(token, readSecret('JWT_REFRESH_SECRET')) as RefreshPayload;

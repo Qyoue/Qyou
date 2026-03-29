@@ -3,6 +3,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { enqueueRequest, flushQueuedRequests, getPendingQueueCount } from "./offlineQueue";
 import { getQueueState, setQueueState } from "./queueState";
 import { QueuedRequest, isQueueableMethod } from "./types";
+import { getStoredSessionTokens } from "@/src/auth/secureTokens";
 
 const baseURL = process.env.EXPO_PUBLIC_API_URL;
 if (!baseURL) {
@@ -59,6 +60,7 @@ const toQueuedRequest = (config: InternalAxiosRequestConfig): QueuedRequest => {
 let initialized = false;
 let unsubscribeNetInfo: (() => void) | null = null;
 let responseInterceptorId: number | null = null;
+let requestInterceptorId: number | null = null;
 
 export const initializeApiClient = async () => {
   if (initialized) {
@@ -76,6 +78,20 @@ export const initializeApiClient = async () => {
   if (initialOnline) {
     await flushQueuedRequests(apiClient);
   }
+
+  requestInterceptorId = apiClient.interceptors.request.use(
+    async (config) => {
+      const stored = await getStoredSessionTokens();
+      if (stored.accessToken) {
+        config.headers.set("Authorization", `Bearer ${stored.accessToken}`);
+      }
+      if (stored.deviceId) {
+        config.headers.set("x-device-id", stored.deviceId);
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
 
   responseInterceptorId = apiClient.interceptors.response.use(
     (response) => response,
@@ -118,6 +134,10 @@ export const shutdownApiClient = () => {
   if (responseInterceptorId !== null) {
     apiClient.interceptors.response.eject(responseInterceptorId);
     responseInterceptorId = null;
+  }
+  if (requestInterceptorId !== null) {
+    apiClient.interceptors.request.eject(requestInterceptorId);
+    requestInterceptorId = null;
   }
   initialized = false;
 };

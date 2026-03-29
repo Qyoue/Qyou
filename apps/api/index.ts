@@ -8,10 +8,13 @@ import { AuthError } from './errors/AppError';
 import { logger } from './logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
+import { queueReportRateLimit } from './middleware/rateLimit';
 import { ensureLocationIndexes } from './models/Location';
+import { adminAuditLogsRouter } from './routes/adminAuditLogs';
 import { adminLocationSeedRouter } from './routes/adminLocationSeed';
 import { locationsRouter } from './routes/locations';
 import { authRouter } from './routes/auth';
+import { adminModule, authModule, locationsModule } from './modules';
 import { shutdownLocationCache } from './services/locationCache';
 
 const app = express();
@@ -22,6 +25,7 @@ app.use(cors());
 app.use(express.json());
 app.use('/auth', authRouter);
 app.use('/admin', adminLocationSeedRouter);
+app.use('/admin', adminAuditLogsRouter);
 app.use('/locations', locationsRouter);
 
 app.get('/health', (req, res) => {
@@ -43,8 +47,10 @@ app.use(errorHandler);
 const connectDB = async () => {
   await mongoose.connect(MONGO_URI);
   await ensureLocationIndexes();
+  await ensureQueueReportIndexes();
   logger.info('MongoDB connected');
   logger.info('Location 2dsphere index ensured');
+  logger.info('Queue report indexes ensured');
 };
 
 const server = app.listen(PORT, async () => {

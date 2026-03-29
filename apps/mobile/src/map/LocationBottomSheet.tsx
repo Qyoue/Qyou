@@ -20,6 +20,13 @@ export type LocationSheetDetails = {
   address: string;
   status?: string;
   distanceFromUser?: number;
+  queueSnapshot?: {
+    level?: string;
+    estimatedWaitMinutes?: number;
+    confidence?: number;
+    lastUpdatedAt?: string | null;
+    isStale?: boolean;
+  };
 };
 
 type LocationBottomSheetProps = {
@@ -228,69 +235,29 @@ export function LocationBottomSheet({
             <Text style={styles.row}>Distance: {details.distanceFromUser.toFixed(0)} m</Text>
           ) : null}
           {details.status ? <Text style={styles.row}>Status: {details.status}</Text> : null}
-
-          <View style={styles.reportSection}>
-            <Text style={styles.sectionTitle}>Report current queue</Text>
-            <Text style={styles.sectionCopy}>
-              Send a live queue update for this location. If the backend route is not deployed yet, this form will fail safely.
+          <View style={styles.snapshotCard}>
+            <Text style={styles.snapshotTitle}>Live queue signal</Text>
+            <Text style={styles.snapshotMetric}>
+              Level: {details.queueSnapshot?.level || "unknown"}
             </Text>
-
-            <TextInput
-              keyboardType="numeric"
-              onChangeText={setWaitTimeMinutes}
-              placeholder="Wait time in minutes (optional)"
-              placeholderTextColor="#7890a5"
-              style={styles.input}
-              value={waitTimeMinutes}
-            />
-
-            <View style={styles.levelRow}>
-              {REPORT_LEVELS.map((item) => (
-                <Pressable
-                  key={item}
-                  onPress={() => setLevel(item)}
-                  style={[styles.levelChip, level === item ? styles.levelChipActive : null]}
-                >
-                  <Text style={[styles.levelChipText, level === item ? styles.levelChipTextActive : null]}>
-                    {item}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <TextInput
-              multiline
-              onChangeText={setNotes}
-              placeholder="Optional note"
-              placeholderTextColor="#7890a5"
-              style={[styles.input, styles.notesInput]}
-              value={notes}
-            />
-
-            {reportState.message ? (
-              <Text
-                style={[
-                  styles.reportMessage,
-                  reportState.status === "error" ? styles.reportMessageError : styles.reportMessageSuccess,
-                ]}
-              >
-                {reportState.message}
-              </Text>
-            ) : null}
-
-            <Pressable
-              disabled={reportState.status === "submitting"}
-              onPress={() => {
-                void handleSubmitReport();
-              }}
-              style={styles.submitButton}
-            >
-              {reportState.status === "submitting" ? (
-                <ActivityIndicator color="#08131c" />
-              ) : (
-                <Text style={styles.submitButtonText}>Submit Report</Text>
-              )}
-            </Pressable>
+            <Text style={styles.snapshotMetric}>
+              Wait: {typeof details.queueSnapshot?.estimatedWaitMinutes === "number"
+                ? `${details.queueSnapshot.estimatedWaitMinutes} min`
+                : "No estimate yet"}
+            </Text>
+            <Text style={styles.snapshotMetric}>
+              Confidence: {typeof details.queueSnapshot?.confidence === "number"
+                ? `${Math.round(details.queueSnapshot.confidence * 100)}%`
+                : "Unavailable"}
+            </Text>
+            <Text style={styles.snapshotBadge}>
+              {details.queueSnapshot?.isStale ? "Freshness: stale" : "Freshness: active"}
+            </Text>
+            <Text style={styles.snapshotMeta}>
+              {details.queueSnapshot?.lastUpdatedAt
+                ? `Updated ${new Date(details.queueSnapshot.lastUpdatedAt).toLocaleTimeString()}`
+                : "No recent crowd updates"}
+            </Text>
           </View>
         </View>
       ) : (
@@ -346,86 +313,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 6,
   },
-  reportSection: {
-    marginTop: 18,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(151, 176, 198, 0.18)",
-  },
-  sectionTitle: {
-    color: "#f4fbff",
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  sectionCopy: {
-    color: "#9eb4c8",
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 10,
-  },
-  input: {
-    backgroundColor: "#0b1620",
-    borderRadius: 12,
+  snapshotCard: {
+    marginTop: 14,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#233544",
-    color: "#f4fbff",
-    fontSize: 14,
-    marginBottom: 10,
+    borderColor: "rgba(142, 198, 255, 0.24)",
+    backgroundColor: "rgba(14, 22, 31, 0.72)",
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
-  notesInput: {
-    minHeight: 82,
-    textAlignVertical: "top",
-  },
-  levelRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 10,
-  },
-  levelChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#294151",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  levelChipActive: {
-    backgroundColor: "#9fe3ff",
-    borderColor: "#9fe3ff",
-  },
-  levelChipText: {
-    color: "#d0dfeb",
-    fontSize: 12,
+  snapshotTitle: {
+    color: "#ffffff",
+    fontSize: 15,
     fontWeight: "700",
+    marginBottom: 8,
+  },
+  snapshotMetric: {
+    color: "#dce7f0",
+    fontSize: 13,
+    marginBottom: 4,
     textTransform: "capitalize",
   },
-  levelChipTextActive: {
-    color: "#07131d",
-  },
-  reportMessage: {
+  snapshotBadge: {
+    color: "#9fe3ff",
     fontSize: 12,
-    marginBottom: 10,
+    fontWeight: "700",
+    marginTop: 4,
+    marginBottom: 4,
+    textTransform: "uppercase",
   },
-  reportMessageError: {
-    color: "#ff9797",
-  },
-  reportMessageSuccess: {
-    color: "#9ce6ba",
-  },
-  submitButton: {
-    minHeight: 46,
-    backgroundColor: "#9fe3ff",
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  submitButtonText: {
-    color: "#08131c",
-    fontSize: 14,
-    fontWeight: "800",
+  snapshotMeta: {
+    color: "#87a1b8",
+    fontSize: 12,
   },
   hint: {
     marginTop: 14,
