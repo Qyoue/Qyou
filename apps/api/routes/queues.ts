@@ -1,27 +1,37 @@
 import { Router } from 'express';
-import { ValidationError } from '../errors/AppError';
-import { getQueueHistoryForLocation } from '../services/queueHistory';
+import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth';
+import { createQueueReport } from '../services/queueReports';
+import { buildQueueSnapshotForLocation } from '../services/queueSnapshots';
 
 const router = Router();
 
-router.get('/:locationId/history', async (req, res) => {
-  const locationId = String(req.params.locationId || '');
-  if (!/^[a-fA-F0-9]{24}$/.test(locationId)) {
-    throw new ValidationError('locationId must be a valid location identifier');
-  }
-
-  const windowHours = req.query.windowHours === undefined ? undefined : Number(req.query.windowHours);
-  const limit = req.query.limit === undefined ? undefined : Number(req.query.limit);
-
-  const history = await getQueueHistoryForLocation({
-    locationId,
-    windowHours,
-    limit,
+router.post('/report', requireAuth, async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const report = await createQueueReport({
+    locationId: String(req.body?.locationId || ''),
+    userId: authReq.auth.userId,
+    waitTimeMinutes:
+      req.body?.waitTimeMinutes === undefined ? undefined : Number(req.body.waitTimeMinutes),
+    level: String(req.body?.level || 'unknown') as 'none' | 'low' | 'medium' | 'high' | 'unknown',
+    notes: req.body?.notes,
   });
 
-  res.json({
+  const snapshot = await buildQueueSnapshotForLocation(String(report.locationId));
+
+  res.status(201).json({
     success: true,
-    data: history,
+    data: {
+      report: {
+        id: String(report._id),
+        locationId: String(report.locationId),
+        userId: String(report.userId),
+        level: report.level,
+        waitTimeMinutes: report.waitTimeMinutes,
+        notes: report.notes,
+        reportedAt: report.reportedAt,
+      },
+      snapshot,
+    },
   });
 });
 

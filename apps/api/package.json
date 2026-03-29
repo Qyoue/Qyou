@@ -6,7 +6,7 @@
     "dev": "node ../../libs/config/validate-env.cjs api && tsx watch index.ts",
     "build": "node ../../libs/config/validate-env.cjs api && tsc",
     "seed:locations": "node ../../libs/config/validate-env.cjs api && tsx scripts/seed-locations.ts",
-    "typecheck": "node ../../libs/config/validate-env.cjs api && tsc --noEmit --rootDir ../.."
+    "test": "node --import tsx --test tests/**/*.test.ts"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +19,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.0.10",
     "@types/supertest": "^7.2.0",
-    "mongodb-memory-server": "^11.0.1",
     "nodemon": "^3.1.11",
     "supertest": "^7.2.2",
     "tsx": "^4.21.0",

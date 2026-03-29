@@ -1,30 +1,6 @@
-import { QueueReport, QueueReportDocument, QueueReportLevel } from '../models/QueueReport';
+import { QueueReport, QueueReportDocument } from '../models/QueueReport';
 
-const STALE_THRESHOLD_MS = 30 * 60 * 1000;
-
-export type QueueSnapshot = {
-  locationId: string;
-  level: QueueReportLevel;
-  estimatedWaitMinutes?: number;
-  reportCount: number;
-  confidence: number;
-  lastUpdatedAt: Date | null;
-  isStale: boolean;
-};
-
-const averageWait = (reports: QueueReportDocument[]) => {
-  const waits = reports
-    .map((item) => item.waitTimeMinutes)
-    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
-
-  if (waits.length === 0) {
-    return undefined;
-  }
-
-  return Math.round(waits.reduce((sum, value) => sum + value, 0) / waits.length);
-};
-
-export const buildQueueSnapshotForLocation = async (locationId: string): Promise<QueueSnapshot> => {
+export const buildQueueSnapshotForLocation = async (locationId: string) => {
   const reports = (await QueueReport.find({
     locationId,
     status: 'accepted',
@@ -37,7 +13,7 @@ export const buildQueueSnapshotForLocation = async (locationId: string): Promise
   if (!latest) {
     return {
       locationId,
-      level: 'unknown',
+      level: 'unknown' as const,
       estimatedWaitMinutes: undefined,
       reportCount: 0,
       confidence: 0,
@@ -46,16 +22,19 @@ export const buildQueueSnapshotForLocation = async (locationId: string): Promise
     };
   }
 
-  const isStale = Date.now() - latest.reportedAt.getTime() > STALE_THRESHOLD_MS;
+  const waits = reports
+    .map((item) => item.waitTimeMinutes)
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
 
   return {
     locationId,
     level: latest.level,
-    estimatedWaitMinutes: averageWait(reports),
+    estimatedWaitMinutes:
+      waits.length > 0 ? Math.round(waits.reduce((sum, value) => sum + value, 0) / waits.length) : undefined,
     reportCount: reports.length,
     confidence: Number(Math.min(1, reports.length / 5).toFixed(2)),
     lastUpdatedAt: latest.reportedAt,
-    isStale,
+    isStale: Date.now() - latest.reportedAt.getTime() > 30 * 60 * 1000,
   };
 };
 
