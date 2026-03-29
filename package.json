@@ -11,7 +11,11 @@
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:admin\" \"npm run dev:mobile\"",
     "dev:api": "npm run dev --workspace=apps/api",
     "dev:admin": "npm run dev --workspace=apps/admin-web",
-    "dev:mobile": "npm run start --workspace=apps/mobile"
+    "dev:mobile": "npm run start --workspace=apps/mobile",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "node scripts/typecheck-workspaces.cjs",
+    "validate": "npm run lint && npm run test && npm run typecheck"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

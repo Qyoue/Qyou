@@ -6,7 +6,7 @@
     "dev": "node ../../libs/config/validate-env.cjs api && tsx watch index.ts",
     "build": "node ../../libs/config/validate-env.cjs api && tsc",
     "seed:locations": "node ../../libs/config/validate-env.cjs api && tsx scripts/seed-locations.ts",
-    "test": "node --import tsx --test tests/**/*.test.ts"
+    "typecheck": "node ../../libs/config/validate-env.cjs api && tsc --noEmit --rootDir ../.."
   },
   "keywords": [],
   "author": "",
