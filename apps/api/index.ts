@@ -8,6 +8,7 @@ import { AuthError } from './errors/AppError';
 import { logger } from './logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
+import { queueReportRewardMiddleware } from './middleware/queueReportReward';
 import { requestMetricsMiddleware } from './middleware/observability';
 import { ensureLocationIndexes } from './models/Location';
 import { adminAuditLogsRouter } from './routes/adminAuditLogs';
