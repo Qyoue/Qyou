@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -42,10 +43,13 @@ function RecenterOnCoordinate({ latitude, longitude }: { latitude: number; longi
 }
 
 export default function LocationCreationForm() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [geocodeLoading, setGeocodeLoading] = useState(false);
   const [geocodeResults, setGeocodeResults] = useState<GeocodeCandidate[]>([]);
   const [submitPayload, setSubmitPayload] = useState<string>("");
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState("");
 
   const {
     register,
@@ -100,6 +104,8 @@ export default function LocationCreationForm() {
   };
 
   const onSubmit = async (values: FormValues) => {
+    setSubmitError("");
+    setSubmitSuccess("");
     const payload = {
       ...values,
       location: {
@@ -107,7 +113,33 @@ export default function LocationCreationForm() {
         coordinates: [values.longitude, values.latitude],
       },
     };
-    setSubmitPayload(JSON.stringify(payload, null, 2));
+
+    try {
+      const response = await fetch("/api/admin/locations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        error?: {
+          message?: string;
+        };
+      };
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error?.message || "Unable to save location.");
+      }
+
+      setSubmitPayload(JSON.stringify(payload, null, 2));
+      setSubmitSuccess("Location created successfully.");
+      router.refresh();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Unable to save location.");
+    }
   };
 
   return (
@@ -234,10 +266,12 @@ export default function LocationCreationForm() {
           </div>
 
           <button className={styles.submit} type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Validate GeoJSON Payload"}
+            {isSubmitting ? "Saving..." : "Create Location"}
           </button>
         </form>
 
+        {submitError ? <p className={styles.error}>{submitError}</p> : null}
+        {submitSuccess ? <p className={styles.mapHint}>{submitSuccess}</p> : null}
         {submitPayload && <pre className={styles.result}>{submitPayload}</pre>}
       </div>
     </div>

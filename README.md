@@ -97,7 +97,7 @@ npm install
 
 ### 2. Configuration
 
-Create a `.env` file in the root directory (copy from `.env.example` if available):
+Create a `.env` file in the root directory:
 
 ```bash
 # API Config
@@ -108,6 +108,18 @@ MONGO_URI=mongodb://localhost:27017/qyou
 STELLAR_NETWORK=TESTNET
 
 ```
+
+You can also copy the included templates:
+
+```bash
+cp .env.example .env
+```
+
+Per-workspace templates are available at:
+- `apps/api/.env.example`
+- `apps/admin-web/.env.example`
+- `apps/mobile/.env.example`
+- `stellar/client/.env.example`
 
 ### 3. Run Locally (The "All-in-One" Command)
 
@@ -131,6 +143,26 @@ cd stellar/client
 npm run test-net
 
 ```
+
+### 5. Seed Demo Data
+
+For a demo-ready local database, seed sample users and locations from the API workspace:
+
+```bash
+npm run seed:demo --workspace=apps/api
+```
+
+This command:
+
+- upserts demo admin and user accounts
+- upserts a small set of representative locations
+- writes `apps/api/scripts/output/demo-queue-activity.json` with synthetic queue activity fixtures for future queue-report ingestion
+
+Default demo accounts:
+
+- `admin@qyou.local` / `QyouAdmin123!`
+- `demo-user-1@qyou.local` / `QyouUser123!`
+- `demo-user-2@qyou.local` / `QyouUser123!`
 
 ---
 

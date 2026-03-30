@@ -11,6 +11,7 @@ type BootstrapState = "loading" | "authenticated" | "unauthenticated" | "locked"
 export type SessionBootstrapResult = {
   state: BootstrapState;
   message: string;
+  deviceId?: string;
 };
 
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL;
@@ -30,6 +31,7 @@ export const bootstrapSession = async (): Promise<SessionBootstrapResult> => {
     return {
       state: "unauthenticated",
       message: "No previous session found.",
+      deviceId: stored.deviceId || undefined,
     };
   }
 
@@ -38,6 +40,7 @@ export const bootstrapSession = async (): Promise<SessionBootstrapResult> => {
     return {
       state: "locked",
       message: biometric.reason || "Biometric unlock failed.",
+      deviceId: stored.deviceId || undefined,
     };
   }
 
@@ -65,12 +68,14 @@ export const bootstrapSession = async (): Promise<SessionBootstrapResult> => {
     return {
       state: "authenticated",
       message: "Session unlocked and refreshed.",
+      deviceId: data.deviceId || stored.deviceId || undefined,
     };
   } catch {
     await clearStoredSessionTokens();
     return {
       state: "unauthenticated",
       message: "Session expired. Please sign in again.",
+      deviceId: undefined,
     };
   }
 };
