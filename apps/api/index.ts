@@ -25,6 +25,7 @@ app.use(cors());
 app.use(express.json());
 app.use(requestMetricsMiddleware);
 app.use('/auth', authRouter);
+app.use('/users', usersRouter);
 app.use('/admin', adminLocationSeedRouter);
 app.use('/internal', internalMetricsRouter);
 app.use('/locations', locationsRouter);

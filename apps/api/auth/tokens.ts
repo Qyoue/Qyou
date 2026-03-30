@@ -2,21 +2,10 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { AuthError, AppError } from '../errors/AppError';
 
-const ACCESS_TOKEN_TTL = '15m';
-const REFRESH_TOKEN_TTL = '7d';
-
 type AccessPayload = {
   type: 'access';
   sub: string;
   role: 'USER' | 'ADMIN';
-};
-
-type RefreshPayload = {
-  type: 'refresh';
-  sub: string;
-  deviceId: string;
-  familyId: string;
-  tokenId: string;
 };
 
 const readSecret = (name: 'JWT_ACCESS_SECRET' | 'JWT_REFRESH_SECRET') => {
