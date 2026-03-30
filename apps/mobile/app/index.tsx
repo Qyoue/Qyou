@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Linking, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { Link } from "expo-router";
 import { Button, Linking, Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
 import { router } from "expo-router";
 import MapView, { Marker, Region } from "react-native-maps";
@@ -332,6 +334,12 @@ const styles = StyleSheet.create({
   text: {
     color: "#dce3ea",
     fontSize: 12,
+  },
+  profileLink: {
+    color: "#9fe3ff",
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 10,
   },
   modal: {
     position: "absolute",
