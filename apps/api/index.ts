@@ -8,13 +8,13 @@ import { AuthError } from './errors/AppError';
 import { logger } from './logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
-import { queueReportRateLimit } from './middleware/rateLimit';
+import { requestMetricsMiddleware } from './middleware/observability';
 import { ensureLocationIndexes } from './models/Location';
 import { adminAuditLogsRouter } from './routes/adminAuditLogs';
 import { adminLocationSeedRouter } from './routes/adminLocationSeed';
 import { locationsRouter } from './routes/locations';
 import { authRouter } from './routes/auth';
-import { queuesRouter } from './routes/queues';
+import { internalMetricsRouter } from './routes/internalMetrics';
 import { shutdownLocationCache } from './services/locationCache';
 
 const app = express();
@@ -23,9 +23,10 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/qyou';
 
 app.use(cors());
 app.use(express.json());
+app.use(requestMetricsMiddleware);
 app.use('/auth', authRouter);
 app.use('/admin', adminLocationSeedRouter);
-app.use('/admin', adminAuditLogsRouter);
+app.use('/internal', internalMetricsRouter);
 app.use('/locations', locationsRouter);
 app.use('/queues', queuesRouter);
 
