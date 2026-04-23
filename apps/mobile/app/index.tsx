@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Linking, StyleSheet, Text, View, useColorScheme } from "react-native";
-import { Link } from "expo-router";
 import { Button, Linking, Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
 import { router } from "expo-router";
 import MapView, { Marker, Region } from "react-native-maps";
@@ -15,25 +13,6 @@ import { apiClient } from "@/src/network/apiClient";
 import type { LocationDetailsResponse } from "@/src/network/contracts";
 import { LocationBottomSheet, LocationSheetDetails } from "@/src/map/LocationBottomSheet";
 import { logoutSession } from "@/src/auth/authClient";
-
-type LocationDetailsResponse = {
-  data?: {
-    item?: {
-      _id?: string;
-      name?: string;
-      type?: string;
-      address?: string;
-      status?: string;
-      queueSnapshot?: {
-        level?: string;
-        estimatedWaitMinutes?: number;
-        confidence?: number;
-        lastUpdatedAt?: string | null;
-        isStale?: boolean;
-      };
-    };
-  };
-};
 
 export default function Index() {
   const colorScheme = useColorScheme();
@@ -334,12 +313,6 @@ const styles = StyleSheet.create({
   text: {
     color: "#dce3ea",
     fontSize: 12,
-  },
-  profileLink: {
-    color: "#9fe3ff",
-    fontSize: 13,
-    fontWeight: "700",
-    marginTop: 10,
   },
   modal: {
     position: "absolute",
