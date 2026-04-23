@@ -81,8 +81,37 @@ export type QueueSnapshot = {
   estimatedWaitMinutes?: number;
   reportCount: number;
   confidence: number; // 0..1
-  lastUpdatedAt: string; // ISO
+  lastUpdatedAt: string | null; // ISO
   isStale: boolean;
+};
+
+export type NearbyLocationItem = {
+  _id: string;
+  name: string;
+  type: LocationType;
+  address: string;
+  status: LocationStatus;
+  location: GeoPoint;
+  distanceFromUser: number;
+  queueSnapshot?: QueueSnapshot;
+};
+
+export type LocationDetailsItem = {
+  _id: string;
+  name: string;
+  type: LocationType;
+  address: string;
+  status: LocationStatus;
+  location: GeoPoint;
+  queueSnapshot?: QueueSnapshot;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ContributionSummary = {
+  reportCount: number;
+  activeSessions: number;
+  rewardBalance: number;
 };
 
 export type RewardTransactionType = 'EARN' | 'SPEND' | 'CLAIM';
@@ -105,4 +134,3 @@ export type RewardBalance = {
   lifetimeEarned?: number;
   lastUpdatedAt?: string;
 };
-
