@@ -5,6 +5,7 @@ import {
   getStoredSessionTokens,
   saveSessionTokens,
 } from "./secureTokens";
+import type { AuthSessionResponse } from "@/src/network/contracts";
 
 type BootstrapState = "loading" | "authenticated" | "unauthenticated" | "locked";
 
@@ -49,11 +50,7 @@ export const bootstrapSession = async (): Promise<SessionBootstrapResult> => {
       refreshToken: stored.refreshToken,
     });
 
-    const data = response.data?.data as {
-      accessToken?: string;
-      refreshToken?: string;
-      deviceId?: string;
-    };
+    const data = (response.data as AuthSessionResponse).data;
 
     if (!data?.accessToken || !data?.refreshToken) {
       throw new Error("Malformed refresh response");
