@@ -3,21 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { apiClient } from "@/src/network/apiClient";
 import { clearStoredSessionTokens, getStoredSessionTokens } from "@/src/auth/secureTokens";
-
-type ProfilePayload = {
-  data?: {
-    user?: {
-      id?: string;
-      email?: string;
-      role?: string;
-    } | null;
-    contributionSummary?: {
-      reportCount?: number;
-      activeSessions?: number;
-      rewardBalance?: number;
-    };
-  };
-};
+import type { ProfileResponse } from "@/src/network/contracts";
 
 export default function ProfileScreen() {
   const [state, setState] = useState({
@@ -54,7 +40,7 @@ export default function ProfileScreen() {
           },
         });
 
-        const payload = response.data as ProfilePayload;
+        const payload = response.data as ProfileResponse;
         if (cancelled) {
           return;
         }
@@ -215,4 +201,3 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 });
-

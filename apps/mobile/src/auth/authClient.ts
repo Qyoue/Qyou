@@ -1,6 +1,7 @@
 import axios from "axios";
 import { clearStoredSessionTokens, saveSessionTokens } from "./secureTokens";
 import { useSessionStore } from "./sessionStore";
+import type { AuthSessionResponse } from "@/src/network/contracts";
 
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL;
 if (!apiBaseUrl) {
@@ -11,14 +12,6 @@ const client = axios.create({
   baseURL: apiBaseUrl,
   timeout: 10000,
 });
-
-type AuthResponsePayload = {
-  data?: {
-    accessToken?: string;
-    refreshToken?: string;
-    deviceId?: string;
-  };
-};
 
 export const registerWithEmail = async (email: string, password: string) => {
   await client.post("/auth/register", { email, password });
@@ -35,7 +28,7 @@ export const loginWithEmail = async (params: {
     deviceId: params.deviceId,
   });
 
-  const payload = response.data as AuthResponsePayload;
+  const payload = response.data as AuthSessionResponse;
   const accessToken = payload.data?.accessToken;
   const refreshToken = payload.data?.refreshToken;
   const deviceId = payload.data?.deviceId || params.deviceId;
@@ -65,4 +58,3 @@ export const logoutSession = async () => {
     deviceId: null,
   });
 };
-

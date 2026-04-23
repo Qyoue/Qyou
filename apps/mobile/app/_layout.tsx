@@ -1,12 +1,14 @@
-import { Stack, router, usePathname } from "expo-router";
+import { Stack, router, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { initializeApiClient, shutdownApiClient } from "@/src/network/apiClient";
 import { Button, StyleSheet, Text, View } from "react-native";
 import { useSessionBootstrap } from "@/src/auth/useSessionBootstrap";
 
+const AUTH_ROUTES = new Set(["login", "register"]);
+
 export default function RootLayout() {
   const { state, message, retry } = useSessionBootstrap();
-  const pathname = usePathname();
+  const segments = useSegments();
 
   useEffect(() => {
     void initializeApiClient();
@@ -20,7 +22,8 @@ export default function RootLayout() {
       return;
     }
 
-    const isAuthRoute = pathname === "/login" || pathname === "/register";
+    const activeRoute = segments[0];
+    const isAuthRoute = typeof activeRoute === "string" && AUTH_ROUTES.has(activeRoute);
 
     if (state === "unauthenticated" && !isAuthRoute) {
       router.replace("/login");
@@ -30,7 +33,7 @@ export default function RootLayout() {
     if (state === "authenticated" && isAuthRoute) {
       router.replace("/");
     }
-  }, [pathname, state]);
+  }, [segments, state]);
 
   if (state === "loading") {
     return (
@@ -55,6 +58,7 @@ export default function RootLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="profile" />
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
     </Stack>

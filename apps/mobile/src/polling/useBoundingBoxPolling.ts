@@ -3,26 +3,10 @@ import { useMapViewportStore } from "../store/mapViewportStore";
 import { useLocationsStore } from "../store/locationsStore";
 import { getAreaKey, getBoundingBoxCenter, getBoundingRadiusMeters, distanceInMeters } from "../map/geo";
 import { apiClient } from "../network/apiClient";
+import type { NearbyLocationsResponse } from "../network/contracts";
 
 const MIN_MOVEMENT_METERS = 500;
 const POLL_INTERVAL_MS = 12000;
-
-type NearbyResponseItem = {
-  _id: string;
-  name: string;
-  type: string;
-  address: string;
-  distanceFromUser: number;
-  location: {
-    coordinates: [number, number];
-  };
-};
-
-type NearbyResponse = {
-  data?: {
-    items?: NearbyResponseItem[];
-  };
-};
 
 export const useBoundingBoxPolling = () => {
   const boundingBox = useMapViewportStore((state) => state.boundingBox);
@@ -72,7 +56,7 @@ export const useBoundingBoxPolling = () => {
           },
         });
 
-        const payload = response.data as NearbyResponse;
+        const payload = response.data as NearbyLocationsResponse;
         const items = payload.data?.items || [];
         const normalized = items
           .filter((item) => {
