@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { initializeApiClient, shutdownApiClient } from "@/src/network/apiClient";
 import { Button, StyleSheet, Text, View } from "react-native";
 import { useSessionBootstrap } from "@/src/auth/useSessionBootstrap";
+import { NetworkStatusBanner } from "@/src/network/NetworkStatusBanner";
 
 const AUTH_ROUTES = new Set(["login", "register"]);
 
@@ -95,12 +96,15 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="profile" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="register" />
+      </Stack>
+      <NetworkStatusBanner />
+    </>
   );
 }
 
