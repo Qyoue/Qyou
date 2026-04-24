@@ -20,7 +20,7 @@ export const saveSessionTokens = async (tokens: SessionTokens) => {
   await Promise.all([
     secureStoreWrite(REFRESH_TOKEN_KEY, tokens.refreshToken),
     secureStoreWrite(ACCESS_TOKEN_KEY, tokens.accessToken),
-    tokens.deviceId ? secureStoreWrite(DEVICE_ID_KEY, tokens.deviceId) : Promise.resolve(),
+    tokens.deviceId ? secureStoreWrite(DEVICE_ID_KEY, tokens.deviceId) : SecureStore.deleteItemAsync(DEVICE_ID_KEY),
   ]);
 };
 
