@@ -134,3 +134,31 @@ export type RewardBalance = {
   lifetimeEarned?: number;
   lastUpdatedAt?: string;
 };
+
+// ── Admin location API contracts ──────────────────────────────────────────────
+
+export type AdminLocationRow = {
+  id: string;
+  name: string;
+  type: LocationType;
+  address: string;
+  status: LocationStatus;
+  coordinates: [number, number] | null; // [lng, lat]
+  createdAt?: string;
+};
+
+export type AdminLocationDetail = Location;
+
+export type AdminLocationsListPayload = {
+  rows: AdminLocationRow[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+  sort: { field: string; direction: "asc" | "desc" };
+  filters: { search: string | null; type: string | null };
+};
+
+export type AdminLocationMutationPayload = { location: AdminLocationDetail };
+
+export type AdminLocationsListResponse = ApiResponse<AdminLocationsListPayload>;
+export type AdminLocationDetailResponse = ApiResponse<AdminLocationMutationPayload>;
+export type AdminLocationCreateResponse = ApiResponse<AdminLocationMutationPayload>;
+export type AdminLocationUpdateResponse = ApiResponse<AdminLocationMutationPayload>;
