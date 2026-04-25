@@ -1,0 +1,144 @@
+.wrap {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f7fbff 0%, #eef5fb 100%);
+  padding: 24px;
+}
+
+.card {
+  max-width: 1240px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid #d9e4ef;
+  border-radius: 16px;
+  box-shadow: 0 8px 22px rgba(16, 39, 67, 0.08);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e6eef6;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #112436;
+}
+
+.sub {
+  margin: 4px 0 0;
+  color: #4a627a;
+  font-size: 13px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.label {
+  font-size: 12px;
+  color: #3e5670;
+  font-weight: 600;
+}
+
+.select {
+  border: 1px solid #c6d7e8;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #163049;
+  background: #fbfdff;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  min-height: 620px;
+}
+
+.mapPane {
+  position: relative;
+  min-height: 620px;
+  border-right: 1px solid #e6eef6;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+}
+
+.stats {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 500;
+  background: rgba(15, 29, 45, 0.88);
+  color: #e6f0fa;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.side {
+  padding: 16px;
+  overflow: auto;
+}
+
+.zoneTitle {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #112436;
+}
+
+.hint {
+  margin: 0;
+  color: #52708e;
+  font-size: 13px;
+}
+
+.list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.item {
+  border: 1px solid #dce8f4;
+  background: #f8fbff;
+  border-radius: 10px;
+  padding: 9px 10px;
+}
+
+.itemName {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #18334c;
+}
+
+.itemMeta {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #4f6b86;
+}
+
+@media (max-width: 1020px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+
+  .mapPane {
+    min-height: 480px;
+    border-right: 0;
+    border-bottom: 1px solid #e6eef6;
+  }
+}
