@@ -3,6 +3,8 @@ import NetInfo from "@react-native-community/netinfo";
 import { enqueueRequest, flushQueuedRequests, getPendingQueueCount } from "./offlineQueue";
 import { getQueueState, setQueueState } from "./queueState";
 import { QueuedRequest, isQueueableMethod } from "./types";
+import { getStoredSessionTokens } from "@/src/auth/secureTokens";
+import { clearExpiredSession, refreshSessionTokens } from "@/src/auth/sessionRefresh";
 
 const baseURL = process.env.EXPO_PUBLIC_API_URL;
 if (!baseURL) {
@@ -59,55 +61,98 @@ const toQueuedRequest = (config: InternalAxiosRequestConfig): QueuedRequest => {
 let initialized = false;
 let unsubscribeNetInfo: (() => void) | null = null;
 let responseInterceptorId: number | null = null;
+let requestInterceptorId: number | null = null;
+let initializationPromise: Promise<void> | null = null;
 
 export const initializeApiClient = async () => {
   if (initialized) {
     return;
   }
-  initialized = true;
-
-  const pendingCount = await getPendingQueueCount();
-  setQueueState({ pendingCount });
-
-  const current = await NetInfo.fetch();
-  const initialOnline = Boolean(current.isConnected && current.isInternetReachable !== false);
-  setQueueState({ isOnline: initialOnline });
-
-  if (initialOnline) {
-    await flushQueuedRequests(apiClient);
+  if (initializationPromise) {
+    return initializationPromise;
   }
 
-  responseInterceptorId = apiClient.interceptors.response.use(
-    (response) => response,
-    async (error: AxiosError) => {
-      const config = error.config;
-      if (!config) {
-        return Promise.reject(error);
-      }
-      if (hasSkipQueueFlag(config)) {
-        return Promise.reject(error);
-      }
-      if (!isQueueableMethod(config.method)) {
-        return Promise.reject(error);
-      }
-      if (!isNetworkFailure(error)) {
-        return Promise.reject(error);
-      }
+  initializationPromise = (async () => {
+    initialized = true;
 
-      await enqueueRequest(toQueuedRequest(config));
-      return Promise.resolve(createQueuedResponse(config));
-    },
-  );
+    const pendingCount = await getPendingQueueCount();
+    setQueueState({ pendingCount });
 
-  unsubscribeNetInfo = NetInfo.addEventListener(async (state) => {
-    const nowOnline = Boolean(state.isConnected && state.isInternetReachable !== false);
-    const previousOnline = getQueueState().isOnline;
-    setQueueState({ isOnline: nowOnline });
+    const current = await NetInfo.fetch();
+    const initialOnline = Boolean(current.isConnected && current.isInternetReachable !== false);
+    setQueueState({ isOnline: initialOnline });
 
-    if (!previousOnline && nowOnline) {
+    if (initialOnline) {
       await flushQueuedRequests(apiClient);
     }
-  });
+
+    requestInterceptorId = apiClient.interceptors.request.use(
+      async (config) => {
+        const stored = await getStoredSessionTokens();
+        if (stored.accessToken) {
+          config.headers.set("Authorization", `Bearer ${stored.accessToken}`);
+        }
+        if (stored.deviceId) {
+          config.headers.set("x-device-id", stored.deviceId);
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    responseInterceptorId = apiClient.interceptors.response.use(
+      (response) => response,
+      async (error: AxiosError) => {
+        const config = error.config;
+        if (!config) {
+          return Promise.reject(error);
+        }
+
+        if (shouldAttemptSessionRefresh(error, config)) {
+          const refreshed = await refreshSessionTokens();
+          if (refreshed.success) {
+            config.headers.set("Authorization", `Bearer ${refreshed.accessToken}`);
+            setRetryAuthRefresh(config, true);
+            return apiClient.request(config);
+          }
+
+          await clearExpiredSession();
+          return Promise.reject(error);
+        }
+
+        if (hasSkipQueueFlag(config)) {
+          return Promise.reject(error);
+        }
+        if (!isQueueableMethod(config.method)) {
+          return Promise.reject(error);
+        }
+        if (!isNetworkFailure(error)) {
+          return Promise.reject(error);
+        }
+
+        await enqueueRequest(toQueuedRequest(config));
+        return Promise.resolve(createQueuedResponse(config));
+      },
+    );
+
+    unsubscribeNetInfo = NetInfo.addEventListener(async (state) => {
+      const nowOnline = Boolean(state.isConnected && state.isInternetReachable !== false);
+      const previousOnline = getQueueState().isOnline;
+      setQueueState({ isOnline: nowOnline });
+
+      if (!previousOnline && nowOnline) {
+        await flushQueuedRequests(apiClient);
+      }
+    });
+  })();
+
+  try {
+    await initializationPromise;
+  } catch (error) {
+    initialized = false;
+    initializationPromise = null;
+    throw error;
+  }
 };
 
 export const shutdownApiClient = () => {
@@ -119,7 +164,12 @@ export const shutdownApiClient = () => {
     apiClient.interceptors.response.eject(responseInterceptorId);
     responseInterceptorId = null;
   }
+  if (requestInterceptorId !== null) {
+    apiClient.interceptors.request.eject(requestInterceptorId);
+    requestInterceptorId = null;
+  }
   initialized = false;
+  initializationPromise = null;
 };
 
 export const flushPendingRequests = async () => {
@@ -133,4 +183,31 @@ const hasSkipQueueFlag = (config?: InternalAxiosRequestConfig): boolean => {
   if (!config) return false;
   const metadata = (config as InternalAxiosRequestConfig & { metadata?: { skipQueue?: boolean } }).metadata;
   return Boolean(metadata?.skipQueue);
+};
+
+const hasRetriedAuthRefresh = (config?: InternalAxiosRequestConfig): boolean => {
+  if (!config) return false;
+  const metadata = (config as InternalAxiosRequestConfig & { metadata?: { retriedAuthRefresh?: boolean } }).metadata;
+  return Boolean(metadata?.retriedAuthRefresh);
+};
+
+const setRetryAuthRefresh = (config: InternalAxiosRequestConfig, value: boolean) => {
+  const metadata =
+    (config as InternalAxiosRequestConfig & { metadata?: { retriedAuthRefresh?: boolean } }).metadata || {};
+  metadata.retriedAuthRefresh = value;
+  (config as InternalAxiosRequestConfig & { metadata?: { retriedAuthRefresh?: boolean } }).metadata = metadata;
+};
+
+const shouldAttemptSessionRefresh = (error: AxiosError, config: InternalAxiosRequestConfig): boolean => {
+  if (error.response?.status !== 401) {
+    return false;
+  }
+  if (hasRetriedAuthRefresh(config)) {
+    return false;
+  }
+  const requestUrl = String(config.url || "");
+  if (requestUrl.includes("/auth/login") || requestUrl.includes("/auth/register") || requestUrl.includes("/auth/refresh")) {
+    return false;
+  }
+  return true;
 };

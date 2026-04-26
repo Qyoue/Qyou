@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from "react";
-import { Button, Linking, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Linking, Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { router } from "expo-router";
 import MapView, { Marker, Region } from "react-native-maps";
 import { darkMapStyle, lightMapStyle } from "@/src/map/mapStyles";
 import { getBoundingBoxFromRegion } from "@/src/map/mapBounds";
@@ -8,6 +9,10 @@ import { useLocationEngine } from "@/src/location/useLocationEngine";
 import { useBoundingBoxPolling } from "@/src/polling/useBoundingBoxPolling";
 import { useLocationsStore } from "@/src/store/locationsStore";
 import { getExpansionRegionForCluster, useMapClusters } from "@/src/map/useMapClusters";
+import { apiClient } from "@/src/network/apiClient";
+import type { LocationDetailsResponse } from "@/src/network/contracts";
+import { LocationBottomSheet, LocationSheetDetails } from "@/src/map/LocationBottomSheet";
+import { logoutSession } from "@/src/auth/authClient";
 
 export default function Index() {
   const colorScheme = useColorScheme();
@@ -32,6 +37,10 @@ export default function Index() {
   const mapRef = useRef<MapView | null>(null);
   const hasCenteredOnUser = useRef(false);
   const currentRegionRef = useRef<Region | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [selectedDetails, setSelectedDetails] = useState<LocationSheetDetails | null>(null);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+  const [detailsRefreshKey, setDetailsRefreshKey] = useState(0);
 
   const customMapStyle = useMemo(
     () => (colorScheme === "dark" ? darkMapStyle : lightMapStyle),
@@ -86,6 +95,60 @@ export default function Index() {
 
   const clusters = useMapClusters(currentRegionRef.current, orderedIds, locationsById);
 
+  useEffect(() => {
+    if (!selectedLocationId) {
+      setSelectedDetails(null);
+      setIsDetailsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const fallback = locationsById[selectedLocationId];
+
+    setIsDetailsLoading(true);
+    void (async () => {
+      try {
+        const response = await apiClient.get(`/locations/${selectedLocationId}`);
+        const payload = response.data as LocationDetailsResponse;
+        const item = payload.data?.item;
+        if (cancelled) return;
+
+        if (item?._id) {
+          setSelectedDetails({
+            id: item._id,
+            name: item.name || fallback?.name || "Location",
+            type: item.type || fallback?.type || "unknown",
+            address: item.address || fallback?.address || "No address available",
+            status: item.status,
+            distanceFromUser: fallback?.distanceFromUser,
+            queueSnapshot: item.queueSnapshot,
+          });
+          return;
+        }
+      } catch {
+        // Fallback to local cached map item.
+      }
+
+      if (!cancelled && fallback) {
+        setSelectedDetails({
+          id: fallback.id,
+          name: fallback.name,
+          type: fallback.type,
+          address: fallback.address,
+          distanceFromUser: fallback.distanceFromUser,
+          queueSnapshot: undefined,
+        });
+      }
+    })().finally(() => {
+      if (!cancelled) {
+        setIsDetailsLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detailsRefreshKey, locationsById, selectedLocationId]);
   return (
     <View style={styles.container}>
       <MapView
@@ -122,6 +185,12 @@ export default function Index() {
               coordinate={item.coordinate}
               title={item.title}
               description={item.description}
+              onPress={() => {
+                const targetId = item.pointIds[0];
+                if (targetId) {
+                  setSelectedLocationId(targetId);
+                }
+              }}
             />
           )
         )}
@@ -143,6 +212,24 @@ export default function Index() {
         <Text style={styles.text}>
           Background hook: {backgroundTrackingPreparation.ready ? "ready" : "prepared"} ({backgroundTrackingPreparation.taskName})
         </Text>
+        <View style={styles.navRow}>
+          <Pressable
+            onPress={() => router.push("/profile")}
+            style={styles.profileButton}
+          >
+            <Text style={styles.profileText}>Profile</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              void logoutSession().finally(() => {
+                router.replace("/login");
+              });
+            }}
+            style={styles.logoutButton}
+          >
+            <Text style={styles.logoutText}>Sign Out</Text>
+          </Pressable>
+        </View>
       </View>
 
       {(permissionStage === "needs-education" || permissionStage === "requesting") && (
@@ -179,6 +266,18 @@ export default function Index() {
           </Text>
         </View>
       )}
+
+      <LocationBottomSheet
+        visible={Boolean(selectedLocationId)}
+        loading={isDetailsLoading}
+        details={selectedDetails}
+        onReportSubmitted={() => {
+          setDetailsRefreshKey((current) => current + 1);
+        }}
+        onDismiss={() => {
+          setSelectedLocationId(null);
+        }}
+      />
     </View>
   );
 }
@@ -199,6 +298,33 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.7)",
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  navRow: {
+    flexDirection: "row",
+    marginTop: 10,
+    gap: 8,
+  },
+  profileButton: {
+    backgroundColor: "#0f7d5f",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  profileText: {
+    color: "#d6f7ec",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  logoutButton: {
+    backgroundColor: "#183246",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  logoutText: {
+    color: "#d8ebf8",
+    fontSize: 13,
+    fontWeight: "700",
   },
   title: {
     color: "#ffffff",

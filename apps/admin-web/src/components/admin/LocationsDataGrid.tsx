@@ -77,6 +77,15 @@ export default function LocationsDataGrid(props: GridProps) {
         cell: ({ row }) =>
           row.original.createdAt ? new Date(row.original.createdAt).toLocaleString() : "-",
       },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => (
+          <Link className={styles.thButton} href={`/admin/locations/${row.original.id}`}>
+            Edit
+          </Link>
+        ),
+      },
     ],
     []
   );
@@ -111,6 +120,9 @@ export default function LocationsDataGrid(props: GridProps) {
       <div className={styles.card}>
         <h1 className={styles.title}>Locations Data Grid</h1>
         <p className={styles.sub}>Server-side pagination, sorting, and filtering with URL state.</p>
+        <p className={styles.sub}>
+          <Link href="/admin/locations/map">Open Spatial Verification Map</Link>
+        </p>
 
         <form className={styles.toolbar} method="GET" action="/admin/locations">
           <input
