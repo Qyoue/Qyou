@@ -220,16 +220,24 @@ export default function Index() {
         <Text style={styles.text}>
           Background hook: {backgroundTrackingPreparation.ready ? "ready" : "prepared"} ({backgroundTrackingPreparation.taskName})
         </Text>
-        <Pressable
-          onPress={() => {
-            void logoutSession().finally(() => {
-              router.replace("/login");
-            });
-          }}
-          style={styles.logoutButton}
-        >
-          <Text style={styles.logoutText}>Sign Out</Text>
-        </Pressable>
+        <View style={styles.navRow}>
+          <Pressable
+            onPress={() => router.push("/profile")}
+            style={styles.profileButton}
+          >
+            <Text style={styles.profileText}>Profile</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              void logoutSession().finally(() => {
+                router.replace("/login");
+              });
+            }}
+            style={styles.logoutButton}
+          >
+            <Text style={styles.logoutText}>Sign Out</Text>
+          </Pressable>
+        </View>
       </View>
 
       {(permissionStage === "needs-education" || permissionStage === "requesting") && (
@@ -296,9 +304,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  logoutButton: {
+  navRow: {
+    flexDirection: "row",
     marginTop: 10,
-    alignSelf: "flex-start",
+    gap: 8,
+  },
+  profileButton: {
+    backgroundColor: "#0f7d5f",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  profileText: {
+    color: "#d6f7ec",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  logoutButton: {
     backgroundColor: "#183246",
     borderRadius: 999,
     paddingHorizontal: 14,
