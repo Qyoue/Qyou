@@ -1,0 +1,124 @@
+.wrap {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f7fbff 0%, #edf3f9 100%);
+  padding: 28px;
+}
+
+.card {
+  max-width: 1180px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid #d6e1ec;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.08);
+}
+
+.title {
+  color: #102334;
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.sub {
+  color: #53697e;
+  margin-bottom: 18px;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 1fr 190px 100px;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.input,
+.select {
+  border: 1px solid #c8d5e2;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.tableWrap {
+  border: 1px solid #dce6ef;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.head {
+  background: #eef4fb;
+}
+
+.th,
+.td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #edf2f7;
+  text-align: left;
+  font-size: 13px;
+}
+
+.thButton {
+  border: none;
+  background: transparent;
+  color: #1a3147;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.thStatic {
+  color: #1a3147;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.filterBtn {
+  border: none;
+  border-radius: 10px;
+  background: #0f67b5;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pagination {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pagerBtns {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  border: 1px solid #c8d7e8;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 12px;
+  color: #1f3348;
+  text-decoration: none;
+}
+
+.btnDisabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+@media (max-width: 900px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+}

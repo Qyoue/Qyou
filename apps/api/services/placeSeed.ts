@@ -1,6 +1,7 @@
 import { Location, LocationDocument, LocationType } from '../models/Location';
 import { ValidationError } from '../errors/AppError';
 import { logger } from '../logger';
+import { cacheLocations } from './locationCache';
 
 type Provider = 'google' | 'osm';
 
@@ -328,6 +329,18 @@ export const seedLocationsFromProvider = async (body: Record<string, unknown>) =
   const inserted = result.upsertedCount || 0;
   const updated = Math.max(0, places.length - inserted);
   const durationMs = Date.now() - startedAt;
+
+  const seededOrFilter = places.map((place) => ({
+    externalSource: place.source,
+    externalPlaceId: place.placeId,
+  }));
+  if (seededOrFilter.length > 0) {
+    const seededDocs = await Location.find(
+      { $or: seededOrFilter },
+      { _id: 1, name: 1, type: 1, address: 1, status: 1, location: 1 },
+    ).lean();
+    await cacheLocations(seededDocs);
+  }
 
   logger.info(
     {
