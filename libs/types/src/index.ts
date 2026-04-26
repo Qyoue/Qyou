@@ -81,8 +81,37 @@ export type QueueSnapshot = {
   estimatedWaitMinutes?: number;
   reportCount: number;
   confidence: number; // 0..1
-  lastUpdatedAt: string; // ISO
+  lastUpdatedAt: string | null; // ISO
   isStale: boolean;
+};
+
+export type NearbyLocationItem = {
+  _id: string;
+  name: string;
+  type: LocationType;
+  address: string;
+  status: LocationStatus;
+  location: GeoPoint;
+  distanceFromUser: number;
+  queueSnapshot?: QueueSnapshot;
+};
+
+export type LocationDetailsItem = {
+  _id: string;
+  name: string;
+  type: LocationType;
+  address: string;
+  status: LocationStatus;
+  location: GeoPoint;
+  queueSnapshot?: QueueSnapshot;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ContributionSummary = {
+  reportCount: number;
+  activeSessions: number;
+  rewardBalance: number;
 };
 
 export type RewardTransactionType = 'EARN' | 'SPEND' | 'CLAIM';
@@ -106,3 +135,30 @@ export type RewardBalance = {
   lastUpdatedAt?: string;
 };
 
+// ── Admin location API contracts ──────────────────────────────────────────────
+
+export type AdminLocationRow = {
+  id: string;
+  name: string;
+  type: LocationType;
+  address: string;
+  status: LocationStatus;
+  coordinates: [number, number] | null; // [lng, lat]
+  createdAt?: string;
+};
+
+export type AdminLocationDetail = Location;
+
+export type AdminLocationsListPayload = {
+  rows: AdminLocationRow[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+  sort: { field: string; direction: "asc" | "desc" };
+  filters: { search: string | null; type: string | null };
+};
+
+export type AdminLocationMutationPayload = { location: AdminLocationDetail };
+
+export type AdminLocationsListResponse = ApiResponse<AdminLocationsListPayload>;
+export type AdminLocationDetailResponse = ApiResponse<AdminLocationMutationPayload>;
+export type AdminLocationCreateResponse = ApiResponse<AdminLocationMutationPayload>;
+export type AdminLocationUpdateResponse = ApiResponse<AdminLocationMutationPayload>;

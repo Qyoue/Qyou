@@ -10,20 +10,9 @@ import { useBoundingBoxPolling } from "@/src/polling/useBoundingBoxPolling";
 import { useLocationsStore } from "@/src/store/locationsStore";
 import { getExpansionRegionForCluster, useMapClusters } from "@/src/map/useMapClusters";
 import { apiClient } from "@/src/network/apiClient";
+import type { LocationDetailsResponse } from "@/src/network/contracts";
 import { LocationBottomSheet, LocationSheetDetails } from "@/src/map/LocationBottomSheet";
 import { logoutSession } from "@/src/auth/authClient";
-
-type LocationDetailsResponse = {
-  data?: {
-    item?: {
-      _id?: string;
-      name?: string;
-      type?: string;
-      address?: string;
-      status?: string;
-    };
-  };
-};
 
 export default function Index() {
   const colorScheme = useColorScheme();
@@ -51,6 +40,7 @@ export default function Index() {
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<LocationSheetDetails | null>(null);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+  const [detailsRefreshKey, setDetailsRefreshKey] = useState(0);
 
   const customMapStyle = useMemo(
     () => (colorScheme === "dark" ? darkMapStyle : lightMapStyle),
@@ -131,6 +121,7 @@ export default function Index() {
             address: item.address || fallback?.address || "No address available",
             status: item.status,
             distanceFromUser: fallback?.distanceFromUser,
+            queueSnapshot: item.queueSnapshot,
           });
           return;
         }
@@ -145,6 +136,7 @@ export default function Index() {
           type: fallback.type,
           address: fallback.address,
           distanceFromUser: fallback.distanceFromUser,
+          queueSnapshot: undefined,
         });
       }
     })().finally(() => {
@@ -156,7 +148,7 @@ export default function Index() {
     return () => {
       cancelled = true;
     };
-  }, [locationsById, selectedLocationId]);
+  }, [detailsRefreshKey, locationsById, selectedLocationId]);
   return (
     <View style={styles.container}>
       <MapView
@@ -279,6 +271,9 @@ export default function Index() {
         visible={Boolean(selectedLocationId)}
         loading={isDetailsLoading}
         details={selectedDetails}
+        onReportSubmitted={() => {
+          setDetailsRefreshKey((current) => current + 1);
+        }}
         onDismiss={() => {
           setSelectedLocationId(null);
         }}

@@ -1,26 +1,51 @@
-import { Stack, router, usePathname } from "expo-router";
-import { useEffect } from "react";
+import { Stack, router, useSegments } from "expo-router";
+import { useEffect, useState } from "react";
 import { initializeApiClient, shutdownApiClient } from "@/src/network/apiClient";
 import { Button, StyleSheet, Text, View } from "react-native";
 import { useSessionBootstrap } from "@/src/auth/useSessionBootstrap";
+import { NetworkStatusBanner } from "@/src/network/NetworkStatusBanner";
+
+const AUTH_ROUTES = new Set(["login", "register"]);
 
 export default function RootLayout() {
   const { state, message, retry } = useSessionBootstrap();
-  const pathname = usePathname();
+  const segments = useSegments();
+  const [apiState, setApiState] = useState<"loading" | "ready" | "error">("loading");
+  const [apiMessage, setApiMessage] = useState("Preparing offline queue and network client...");
+  const [initAttempt, setInitAttempt] = useState(0);
 
   useEffect(() => {
-    void initializeApiClient();
+    let cancelled = false;
+
+    void initializeApiClient()
+      .then(() => {
+        if (cancelled) {
+          return;
+        }
+        setApiState("ready");
+        setApiMessage("Network client ready.");
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setApiState("error");
+        setApiMessage("Unable to start the network client. Retry to continue.");
+      });
+
     return () => {
+      cancelled = true;
       shutdownApiClient();
     };
-  }, []);
+  }, [initAttempt]);
 
   useEffect(() => {
     if (state === "loading" || state === "locked") {
       return;
     }
 
-    const isAuthRoute = pathname === "/login" || pathname === "/register";
+    const activeRoute = segments[0];
+    const isAuthRoute = typeof activeRoute === "string" && AUTH_ROUTES.has(activeRoute);
 
     if (state === "unauthenticated" && !isAuthRoute) {
       router.replace("/login");
@@ -30,13 +55,31 @@ export default function RootLayout() {
     if (state === "authenticated" && isAuthRoute) {
       router.replace("/");
     }
-  }, [pathname, state]);
+  }, [segments, state]);
 
-  if (state === "loading") {
+  if (apiState === "loading" || state === "loading") {
     return (
       <View style={styles.centered}>
-        <Text style={styles.title}>Securing Session</Text>
-        <Text style={styles.subtitle}>{message}</Text>
+        <Text style={styles.title}>{apiState === "loading" ? "Starting Network" : "Securing Session"}</Text>
+        <Text style={styles.subtitle}>{apiState === "loading" ? apiMessage : message}</Text>
+      </View>
+    );
+  }
+
+  if (apiState === "error") {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.title}>Startup Blocked</Text>
+        <Text style={styles.subtitle}>{apiMessage}</Text>
+        <View style={styles.spacer} />
+        <Button
+          title="Retry Network Setup"
+          onPress={() => {
+            setApiState("loading");
+            setApiMessage("Preparing offline queue and network client...");
+            setInitAttempt((current) => current + 1);
+          }}
+        />
       </View>
     );
   }
@@ -53,11 +96,15 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="register" />
+      </Stack>
+      <NetworkStatusBanner />
+    </>
   );
 }
 

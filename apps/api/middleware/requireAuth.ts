@@ -1,14 +1,12 @@
 import { Request, RequestHandler } from 'express';
-import { AuthError } from '../errors/AppError';
 import { verifyAccessToken } from '../auth/tokens';
-
-type AuthenticatedAccess = {
-  userId: string;
-  role: 'USER' | 'ADMIN';
-};
+import { AuthError } from '../errors/AppError';
 
 export type AuthenticatedRequest = Request & {
-  auth: AuthenticatedAccess;
+  auth: {
+    userId: string;
+    role: 'USER' | 'ADMIN';
+  };
 };
 
 export const requireAuth: RequestHandler = (req, _res, next) => {
@@ -17,10 +15,8 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
     return next(new AuthError('Missing bearer token'));
   }
 
-  const token = authorization.replace('Bearer ', '').trim();
-
   try {
-    const payload = verifyAccessToken(token);
+    const payload = verifyAccessToken(authorization.replace('Bearer ', '').trim());
     (req as AuthenticatedRequest).auth = {
       userId: payload.sub,
       role: payload.role,
@@ -30,3 +26,4 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
     return next(error);
   }
 };
+
