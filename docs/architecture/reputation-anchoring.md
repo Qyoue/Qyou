@@ -141,3 +141,22 @@ Let:
 ## Acceptance Criteria Mapping
 - A generic Reputation Signal schema is defined in **Generic Reputation Signal Schema (off-chain canonical)**.
 - The trade-off between real-time trust and transaction costs is documented in **Trade-off: Real-time Trust vs Transaction Costs**.
+
+## Batch Anchor Job Input Contract
+
+The backend uses a standardized `BatchAnchorJobInput` contract to queue and execute reputation anchoring jobs:
+
+```typescript
+type BatchAnchorJobInput = {
+  batchId: string;           // Unique identifier for this batch
+  userId: string;            // User initiating or associated with batch
+  reportIds: string[];       // Report IDs included in this anchor
+  anchorTimestamp: number;   // Unix timestamp for anchor window
+  ledgerSequence?: number;   // Stellar ledger sequence (post-anchor)
+  transactionHash?: string;  // Stellar transaction hash (post-anchor)
+};
+```
+
+This contract ensures clean handoff between the reputation engine and the Stellar anchoring service, maintaining deterministic references without coupling live app state to Horizon responses.
+
+
