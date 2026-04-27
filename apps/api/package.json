@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node ../../libs/config/validate-env.cjs api && tsx watch index.ts",
     "build": "node ../../libs/config/validate-env.cjs api && tsc",
+    "typecheck": "node ../../libs/config/validate-env.cjs api && tsc --noEmit",
     "seed:locations": "node ../../libs/config/validate-env.cjs api && tsx scripts/seed-locations.ts",
     "test": "node --import tsx --test tests/**/*.test.ts"
   },
