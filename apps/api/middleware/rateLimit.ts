@@ -94,3 +94,15 @@ export const queueReportRateLimit = createRateLimit({
   windowMs: readNumber('QUEUE_REPORT_RATE_LIMIT_WINDOW_MS', 10 * 60 * 1000),
   maxRequests: readNumber('QUEUE_REPORT_RATE_LIMIT_MAX_REQUESTS', 15),
 });
+
+export const locationReadRateLimit = createRateLimit({
+  keyPrefix: 'location-read',
+  windowMs: readNumber('LOCATION_READ_RATE_LIMIT_WINDOW_MS', 60 * 1000),
+  maxRequests: readNumber('LOCATION_READ_RATE_LIMIT_MAX_REQUESTS', 120),
+});
+
+export const adminRateLimit = createRateLimit({
+  keyPrefix: 'admin',
+  windowMs: readNumber('ADMIN_RATE_LIMIT_WINDOW_MS', 60 * 1000),
+  maxRequests: readNumber('ADMIN_RATE_LIMIT_MAX_REQUESTS', 60),
+});
