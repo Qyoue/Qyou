@@ -10,6 +10,7 @@ import { adminLocationSeedRouter } from './routes/adminLocationSeed';
 import { authRouter } from './routes/auth';
 import { internalMetricsRouter } from './routes/internalMetrics';
 import { locationsRouter } from './routes/locations';
+import { queuesRouter } from './routes/queues';
 import { readinessRouter } from './routes/readiness';
 
 export function createApp() {
@@ -24,6 +25,7 @@ export function createApp() {
   app.use('/admin/audit', adminAuditLogsRouter);
   app.use('/internal', internalMetricsRouter);
   app.use('/locations', locationsRouter);
+  app.use('/queues', queuesRouter);
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', service: 'Qyou API', timestamp: new Date() });

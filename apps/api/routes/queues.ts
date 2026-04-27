@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth';
 import { createQueueReport } from '../services/queueReports';
 import { buildQueueSnapshotForLocation } from '../services/queueSnapshots';
+import { getQueueHistoryForLocation } from '../services/queueHistory';
 
 const router = Router();
 
@@ -33,6 +34,16 @@ router.post('/report', requireAuth, async (req, res) => {
       snapshot,
     },
   });
+});
+
+router.get('/:locationId/history', async (req, res) => {
+  const { locationId } = req.params;
+  const windowHours = req.query.windowHours !== undefined ? Number(req.query.windowHours) : undefined;
+  const limit = req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+
+  const result = await getQueueHistoryForLocation({ locationId, windowHours, limit });
+
+  res.json({ success: true, data: result });
 });
 
 export const queuesRouter = router;
