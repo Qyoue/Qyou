@@ -162,3 +162,4 @@ export type AdminLocationsListResponse = ApiResponse<AdminLocationsListPayload>;
 export type AdminLocationDetailResponse = ApiResponse<AdminLocationMutationPayload>;
 export type AdminLocationCreateResponse = ApiResponse<AdminLocationMutationPayload>;
 export type AdminLocationUpdateResponse = ApiResponse<AdminLocationMutationPayload>;
+export * from './reputationAnchor';
