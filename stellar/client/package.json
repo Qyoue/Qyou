@@ -10,6 +10,8 @@
     "build": "node ../../libs/config/validate-env.cjs stellar && tsc",
     "watch": "tsc -w",
     "test-net": "node ../../libs/config/validate-env.cjs stellar && tsx src/test-wallet.ts",
+    "wallet-check": "node ../../libs/config/validate-env.cjs stellar && tsx src/cli.ts wallet-check",
+    "payment-dry-run": "node ../../libs/config/validate-env.cjs stellar && tsx src/cli.ts payment-dry-run",
     "typecheck": "node ../../libs/config/validate-env.cjs stellar && tsc --noEmit"
   },
   "dependencies": {

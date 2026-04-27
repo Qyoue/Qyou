@@ -1,47 +1,35 @@
+/**
+ * Production wallet helpers.
+ * No test utilities or Friendbot references here.
+ */
 import { Keypair } from '@stellar/stellar-sdk';
 
+export interface WalletInfo {
+  publicKey: string;
+  secret: string;
+  pair: Keypair;
+}
+
 export class WalletManager {
-  static createRandom() {
+  static createRandom(): WalletInfo {
     const pair = Keypair.random();
-    return {
-      publicKey: pair.publicKey(),
-      secret: pair.secret(),
-      pair: pair,
-    };
+    return { publicKey: pair.publicKey(), secret: pair.secret(), pair };
   }
 
-  static fromSecret(secret: string) {
+  static fromSecret(secret: string): WalletInfo {
     try {
       const pair = Keypair.fromSecret(secret);
-      return {
-        publicKey: pair.publicKey(),
-        secret: pair.secret(),
-        pair: pair,
-      };
-    } catch (e) {
-      throw new Error('Invalid Stellar Secret Key provided.');
+      return { publicKey: pair.publicKey(), secret: pair.secret(), pair };
+    } catch {
+      throw new Error('Invalid Stellar secret key.');
     }
   }
+}
 
-  static async fundAccount(publicKey: string): Promise<boolean> {
-    console.log(`🤖 Summoning Friendbot to fund: ${publicKey.slice(0, 8)}...`);
-
-    try {
-      const response = await fetch(
-        `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`,
-      );
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log(`✅ Friendbot successfully funded the account!`);
-        return true;
-      } else {
-        console.error(' Friendbot failed:', data);
-        return false;
-      }
-    } catch (e: any) {
-      console.error(' Network error contacting Friendbot:', e.message);
-      return false;
-    }
-  }
+/**
+ * Thin helper used by test utilities only.
+ * Kept here so test-wallet.ts can import without pulling in Friendbot logic.
+ */
+export function createTestWallet(): WalletInfo {
+  return WalletManager.createRandom();
 }
