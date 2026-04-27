@@ -8,6 +8,17 @@ type AccessPayload = {
   role: 'USER' | 'ADMIN';
 };
 
+type RefreshPayload = {
+  type: 'refresh';
+  sub: string;
+  deviceId: string;
+  familyId: string;
+  tokenId: string;
+};
+
+const ACCESS_TOKEN_TTL = '15m';
+const REFRESH_TOKEN_TTL = '7d';
+
 const readSecret = (name: 'JWT_ACCESS_SECRET' | 'JWT_REFRESH_SECRET') => {
   const secret = process.env[name];
   if (!secret || secret.length < 32) {
@@ -74,6 +85,19 @@ export const verifyAccessToken = (token: string): AccessPayload => {
   } catch (error) {
     if (error instanceof AuthError) throw error;
     throw new AuthError('Invalid or expired access token');
+  }
+};
+
+export const verifyRefreshToken = (token: string): RefreshPayload => {
+  try {
+    const payload = jwt.verify(token, readSecret('JWT_REFRESH_SECRET')) as RefreshPayload;
+    if (payload.type !== 'refresh') {
+      throw new AuthError('Invalid token type');
+    }
+    return payload;
+  } catch (error) {
+    if (error instanceof AuthError) throw error;
+    throw new AuthError('Invalid or expired refresh token');
   }
 };
 
