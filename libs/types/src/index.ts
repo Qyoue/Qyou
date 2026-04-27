@@ -162,4 +162,24 @@ export type AdminLocationsListResponse = ApiResponse<AdminLocationsListPayload>;
 export type AdminLocationDetailResponse = ApiResponse<AdminLocationMutationPayload>;
 export type AdminLocationCreateResponse = ApiResponse<AdminLocationMutationPayload>;
 export type AdminLocationUpdateResponse = ApiResponse<AdminLocationMutationPayload>;
-export * from './reputationAnchor';
+
+export type BatchAnchorJobInput = {
+  batchId: string;
+  userId: string;
+  reportIds: string[];
+  anchorTimestamp: number;
+  ledgerSequence?: number;
+  transactionHash?: string;
+};
+
+export type BatchAnchorJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+export type BatchAnchorJob = {
+  id: string;
+  input: BatchAnchorJobInput;
+  status: BatchAnchorJobStatus;
+  createdAt: string;
+  completedAt?: string;
+  error?: string;
+};
+

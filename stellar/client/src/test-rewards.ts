@@ -35,3 +35,17 @@ async function runRewardTest() {
 }
 
 runRewardTest();
+
+export async function smokeTestRewards(): Promise<boolean> {
+  try {
+    const rewards = new MockRewardService();
+    const testUser = 'SMOKE_TEST_USER';
+    const balance = await rewards.getBalance(testUser);
+    if (typeof balance !== 'number') return false;
+    console.log('✅ Rewards smoke test passed');
+    return true;
+  } catch {
+    console.error('❌ Rewards smoke test failed');
+    return false;
+  }
+}

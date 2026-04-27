@@ -39,3 +39,15 @@ async function runWalletTest() {
 }
 
 runWalletTest();
+
+export async function smokeTestWallet(): Promise<boolean> {
+  try {
+    const wallet = WalletManager.createRandom();
+    if (!wallet.publicKey || !wallet.secret) return false;
+    console.log('✅ Wallet smoke test passed');
+    return true;
+  } catch {
+    console.error('❌ Wallet smoke test failed');
+    return false;
+  }
+}

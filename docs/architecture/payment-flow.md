@@ -168,3 +168,44 @@ Disputes are handled as a **two-layer model**:
 - Add buddy collateral/slashing in high-risk regions.
 - Add reputation-weighted auto-resolution for low-value disputes.
 - Add milestone escrow for long queue tasks.
+
+## Treasury Wallet Rotation and Recovery
+
+### Rotation Strategy
+To support safer operator handling of settlement credentials, the treasury wallet should be rotated periodically or when compromise is suspected.
+
+**Rotation Steps:**
+1. Generate new keypair using secure entropy source
+2. Fund new wallet with minimum operational balance
+3. Update backend configuration to reference new public key
+4. Transfer remaining balance from old wallet to new wallet
+5. Archive old wallet secret in secure offline storage
+6. Update monitoring and alerting to track new wallet address
+
+### Recovery Procedures
+In case of wallet compromise or loss:
+
+**Scenario 1: Secret Key Compromised**
+- Immediately rotate to new wallet following rotation steps above
+- Audit all transactions from compromised wallet
+- Notify affected users if funds were moved
+
+**Scenario 2: Secret Key Lost (but wallet still accessible)**
+- Generate recovery wallet immediately
+- Transfer all funds to recovery wallet
+- Update all backend references
+- Document incident for audit trail
+
+**Scenario 3: Complete Loss (secret lost, no access)**
+- If wallet had no balance: generate new wallet and update config
+- If wallet had balance: recovery depends on backup procedures
+- Review and strengthen backup procedures to prevent recurrence
+
+### Security Best Practices
+- Store treasury secrets in hardware security modules (HSM) or secure key management service
+- Use multi-signature wallets for high-value treasury operations
+- Maintain offline backup of wallet secrets in geographically distributed locations
+- Implement transaction signing ceremonies for large transfers
+- Log all treasury operations with tamper-evident audit trail
+
+
