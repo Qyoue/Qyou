@@ -30,3 +30,5 @@ export { Keypair } from '@stellar/stellar-sdk';
 export * from './transactions';
 
 export * from './rewards';
+export * from './rewardHistory';
+export * from './anchorProof';
