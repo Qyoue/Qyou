@@ -26,8 +26,11 @@ export const requireAdmin: RequestHandler = (req, _res, next) => {
 
   try {
     const payload = jwt.verify(token, readAccessSecret()) as AccessPayload;
-    if (payload.type !== 'access' || payload.role !== 'ADMIN') {
-      return next(new AuthError('Admin access required'));
+    if (payload.type !== 'access') {
+      return next(new AuthError('Invalid token type'));
+    }
+    if (payload.role !== 'ADMIN') {
+      return next(new AppError('Admin access required', 403, 'FORBIDDEN'));
     }
     return next();
   } catch (error) {
