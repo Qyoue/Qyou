@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { Location, LocationType } from '../models/Location';
 import { User } from '../models/User';
+import type { DemoSeedManifest } from './seedManifest';
 
 type DemoLocationSeed = {
   name: string;
@@ -54,7 +55,7 @@ const DEMO_LOCATIONS: DemoLocationSeed[] = [
 const buildQueueFixtures = () =>
   DEMO_LOCATIONS.map((location, index) => ({
     locationName: location.name,
-    queueStatus: index % 2 === 0 ? 'busy' : 'moderate',
+    queueStatus: (index % 2 === 0 ? 'busy' : 'moderate') as 'busy' | 'moderate' | 'quiet',
     estimatedWaitMinutes: 10 + index * 7,
     reportedAt: new Date(Date.now() - index * 15 * 60_000).toISOString(),
     note:
@@ -131,7 +132,7 @@ const writeQueueFixtureFile = async () => {
   const outputFile = path.join(outputDir, 'demo-queue-activity.json');
   await fs.mkdir(outputDir, { recursive: true });
 
-  const payload = {
+  const payload: DemoSeedManifest = {
     generatedAt: new Date().toISOString(),
     seedMode: 'fixture-only',
     notes: [
@@ -145,10 +146,47 @@ const writeQueueFixtureFile = async () => {
   return outputFile;
 };
 
+const SEED_LOCK_FILE = path.join(process.cwd(), 'scripts', 'output', '.seed-lock.json');
+
+const readSeedLock = async (): Promise<{ seededAt?: string } | null> => {
+  try {
+    const content = await fs.readFile(SEED_LOCK_FILE, 'utf8');
+    return JSON.parse(content) as { seededAt?: string };
+  } catch {
+    return null;
+  }
+};
+
+const writeSeedLock = async () => {
+  const outputDir = path.join(process.cwd(), 'scripts', 'output');
+  await fs.mkdir(outputDir, { recursive: true });
+  await fs.writeFile(
+    SEED_LOCK_FILE,
+    JSON.stringify({ seededAt: new Date().toISOString() }, null, 2),
+    'utf8',
+  );
+};
+
 const run = async () => {
   const mongoUri = process.env.MONGO_URI;
   if (!mongoUri) {
     throw new Error('MONGO_URI is required');
+  }
+
+  const force = process.argv.includes('--force');
+  if (!force) {
+    const lock = await readSeedLock();
+    if (lock?.seededAt) {
+      // eslint-disable-next-line no-console
+      console.log(
+        JSON.stringify(
+          { success: true, skipped: true, reason: 'already seeded', seededAt: lock.seededAt },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
   }
 
   await mongoose.connect(mongoUri);
@@ -157,6 +195,7 @@ const run = async () => {
     const users = await ensureDemoUsers();
     const locations = await ensureDemoLocations();
     const queueFixtureFile = await writeQueueFixtureFile();
+    await writeSeedLock();
 
     // eslint-disable-next-line no-console
     console.log(
