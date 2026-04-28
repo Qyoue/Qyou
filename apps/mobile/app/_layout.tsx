@@ -102,6 +102,7 @@ export default function RootLayout() {
         <Stack.Screen name="profile" />
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
+        <Stack.Screen name="queued-submissions" options={{ presentation: "card" }} />
       </Stack>
       <NetworkStatusBanner />
     </>
