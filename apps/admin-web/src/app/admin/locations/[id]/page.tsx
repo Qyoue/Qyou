@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import EditLocationForm from "@/components/admin/EditLocationForm";
+import QueueActivitySection from "@/components/admin/QueueActivitySection";
 
 type LocationPayload = {
   id: string;
@@ -33,6 +34,11 @@ export default async function EditLocationPage(props: { params: Promise<{ id: st
     }
   }
 
-  return <EditLocationForm location={location} />;
+  return (
+    <>
+      <EditLocationForm location={location} />
+      <QueueActivitySection locationId={params.id} />
+    </>
+  );
 }
 
