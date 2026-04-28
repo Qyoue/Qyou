@@ -106,3 +106,15 @@ export type RewardBalance = {
   lastUpdatedAt?: string;
 };
 
+
+export type EscrowState =
+  | 'CREATED' | 'FUNDED' | 'BUDDY_ACCEPTED' | 'IN_PROGRESS'
+  | 'COMPLETED' | 'DISPUTED' | 'RELEASED' | 'REFUNDED' | 'EXPIRED';
+
+export type PayoutFailureCode =
+  | 'INSUFFICIENT_BALANCE' | 'ACCOUNT_NOT_FOUND' | 'ACCOUNT_NOT_TRUSTED'
+  | 'TRANSACTION_REJECTED' | 'NETWORK_TIMEOUT' | 'HORIZON_ERROR'
+  | 'INVALID_DESTINATION' | 'MEMO_TOO_LONG' | 'FEE_TOO_LOW'
+  | 'ESCROW_LOCKED' | 'ESCROW_EXPIRED' | 'BUDDY_DISPUTE_OPEN' | 'UNKNOWN';
+
+export type PayoutFailureSeverity = 'retryable' | 'terminal' | 'manual_review';
