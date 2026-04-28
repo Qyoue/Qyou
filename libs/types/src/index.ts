@@ -81,8 +81,37 @@ export type QueueSnapshot = {
   estimatedWaitMinutes?: number;
   reportCount: number;
   confidence: number; // 0..1
-  lastUpdatedAt: string; // ISO
+  lastUpdatedAt: string | null; // ISO
   isStale: boolean;
+};
+
+export type NearbyLocationItem = {
+  _id: string;
+  name: string;
+  type: LocationType;
+  address: string;
+  status: LocationStatus;
+  location: GeoPoint;
+  distanceFromUser: number;
+  queueSnapshot?: QueueSnapshot;
+};
+
+export type LocationDetailsItem = {
+  _id: string;
+  name: string;
+  type: LocationType;
+  address: string;
+  status: LocationStatus;
+  location: GeoPoint;
+  queueSnapshot?: QueueSnapshot;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ContributionSummary = {
+  reportCount: number;
+  activeSessions: number;
+  rewardBalance: number;
 };
 
 export type RewardTransactionType = 'EARN' | 'SPEND' | 'CLAIM';
@@ -106,15 +135,51 @@ export type RewardBalance = {
   lastUpdatedAt?: string;
 };
 
+// ── Admin location API contracts ──────────────────────────────────────────────
 
-export type EscrowState =
-  | 'CREATED' | 'FUNDED' | 'BUDDY_ACCEPTED' | 'IN_PROGRESS'
-  | 'COMPLETED' | 'DISPUTED' | 'RELEASED' | 'REFUNDED' | 'EXPIRED';
+export type AdminLocationRow = {
+  id: string;
+  name: string;
+  type: LocationType;
+  address: string;
+  status: LocationStatus;
+  coordinates: [number, number] | null; // [lng, lat]
+  createdAt?: string;
+};
 
-export type PayoutFailureCode =
-  | 'INSUFFICIENT_BALANCE' | 'ACCOUNT_NOT_FOUND' | 'ACCOUNT_NOT_TRUSTED'
-  | 'TRANSACTION_REJECTED' | 'NETWORK_TIMEOUT' | 'HORIZON_ERROR'
-  | 'INVALID_DESTINATION' | 'MEMO_TOO_LONG' | 'FEE_TOO_LOW'
-  | 'ESCROW_LOCKED' | 'ESCROW_EXPIRED' | 'BUDDY_DISPUTE_OPEN' | 'UNKNOWN';
+export type AdminLocationDetail = Location;
 
-export type PayoutFailureSeverity = 'retryable' | 'terminal' | 'manual_review';
+export type AdminLocationsListPayload = {
+  rows: AdminLocationRow[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+  sort: { field: string; direction: "asc" | "desc" };
+  filters: { search: string | null; type: string | null };
+};
+
+export type AdminLocationMutationPayload = { location: AdminLocationDetail };
+
+export type AdminLocationsListResponse = ApiResponse<AdminLocationsListPayload>;
+export type AdminLocationDetailResponse = ApiResponse<AdminLocationMutationPayload>;
+export type AdminLocationCreateResponse = ApiResponse<AdminLocationMutationPayload>;
+export type AdminLocationUpdateResponse = ApiResponse<AdminLocationMutationPayload>;
+
+export type BatchAnchorJobInput = {
+  batchId: string;
+  userId: string;
+  reportIds: string[];
+  anchorTimestamp: number;
+  ledgerSequence?: number;
+  transactionHash?: string;
+};
+
+export type BatchAnchorJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+export type BatchAnchorJob = {
+  id: string;
+  input: BatchAnchorJobInput;
+  status: BatchAnchorJobStatus;
+  createdAt: string;
+  completedAt?: string;
+  error?: string;
+};
+

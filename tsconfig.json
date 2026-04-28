@@ -1,8 +1,15 @@
 {
     "compilerOptions": {
+        "baseUrl": ".",
         "target": "ESNext",
         "module": "ESNext",
         "moduleResolution": "Bundler",
+        "paths": {
+            "@qyou/stellar": [
+                "stellar/client/src",
+                "stellar/client"
+            ]
+        },
         "strict": true,
         "esModuleInterop": true,
         "skipLibCheck": true,

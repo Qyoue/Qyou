@@ -12,49 +12,21 @@ type CreateQueueReportInput = {
   waitTimeMinutes?: number;
   level: QueueReportLevel;
   notes?: string;
-  reportedAt?: Date;
-};
-
-type QueueReportValidationResult = {
-  locationObjectId: Types.ObjectId;
-  userObjectId: Types.ObjectId;
-  waitTimeMinutes?: number;
-  level: QueueReportLevel;
-  notes?: string;
-  reportedAt: Date;
 };
 
 const isObjectId = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
 
-const normalizeOptionalText = (value: unknown) => {
-  const next = String(value || '').trim();
-  return next || undefined;
-};
-
-export const validateQueueReportInput = async (
+export const createQueueReport = async (
   input: CreateQueueReportInput,
-): Promise<QueueReportValidationResult> => {
+): Promise<QueueReportDocument> => {
   if (!isObjectId(input.locationId)) {
     throw new ValidationError('locationId must be a valid location identifier');
   }
-
   if (!isObjectId(input.userId)) {
     throw new ValidationError('userId must be a valid user identifier');
   }
-
   if (!['none', 'low', 'medium', 'high', 'unknown'].includes(input.level)) {
     throw new ValidationError('level must be one of: none, low, medium, high, unknown');
-  }
-
-  if (input.waitTimeMinutes !== undefined) {
-    if (!Number.isFinite(input.waitTimeMinutes) || input.waitTimeMinutes < 0 || input.waitTimeMinutes > 1440) {
-      throw new ValidationError('waitTimeMinutes must be between 0 and 1440');
-    }
-  }
-
-  const notes = normalizeOptionalText(input.notes);
-  if (notes && notes.length > 280) {
-    throw new ValidationError('notes must be 280 characters or less');
   }
 
   const [location, user] = await Promise.all([
@@ -65,70 +37,32 @@ export const validateQueueReportInput = async (
   if (!location || location.status !== 'active') {
     throw new ValidationError('locationId must reference an active location');
   }
-
   if (!user) {
     throw new ValidationError('userId must reference an existing user');
   }
 
-  return {
-    locationObjectId: new Types.ObjectId(input.locationId),
-    userObjectId: new Types.ObjectId(input.userId),
-    waitTimeMinutes: input.waitTimeMinutes,
-    level: input.level,
-    notes,
-    reportedAt: input.reportedAt || new Date(),
-  };
-};
+  const reportedAt = new Date();
+  const since = new Date(reportedAt.getTime() - DUPLICATE_COOLDOWN_MINUTES * 60 * 1000);
 
-export const findRecentDuplicateQueueReport = async (params: {
-  locationId: string;
-  userId: string;
-  reportedAt?: Date;
-}) => {
-  const anchorTime = params.reportedAt || new Date();
-  const since = new Date(anchorTime.getTime() - DUPLICATE_COOLDOWN_MINUTES * 60 * 1000);
-
-  return QueueReport.findOne({
-    locationId: params.locationId,
-    userId: params.userId,
-    reportedAt: {
-      $gte: since,
-      $lte: anchorTime,
-    },
-    status: 'accepted',
-  })
-    .sort({ reportedAt: -1 })
-    .lean();
-};
-
-export const createQueueReport = async (
-  input: CreateQueueReportInput,
-): Promise<QueueReportDocument> => {
-  const validated = await validateQueueReportInput(input);
-  const existing = await findRecentDuplicateQueueReport({
+  const duplicate = await QueueReport.findOne({
     locationId: input.locationId,
     userId: input.userId,
-    reportedAt: validated.reportedAt,
-  });
+    status: 'accepted',
+    reportedAt: { $gte: since, $lte: reportedAt },
+  }).lean();
 
-  if (existing) {
+  if (duplicate) {
     throw new ValidationError('A recent queue report already exists for this user and location');
   }
 
   return QueueReport.create({
-    locationId: validated.locationObjectId,
-    userId: validated.userObjectId,
-    waitTimeMinutes: validated.waitTimeMinutes,
-    level: validated.level,
-    notes: validated.notes,
+    locationId: new Types.ObjectId(input.locationId),
+    userId: new Types.ObjectId(input.userId),
+    waitTimeMinutes: input.waitTimeMinutes,
+    level: input.level,
+    notes: input.notes,
     status: 'accepted',
-    reportedAt: validated.reportedAt,
+    reportedAt,
   });
 };
-
-export const QUEUE_REPORT_RULES = {
-  duplicateCooldownMinutes: DUPLICATE_COOLDOWN_MINUTES,
-  maxWaitTimeMinutes: 1440,
-  maxNotesLength: 280,
-} as const;
 

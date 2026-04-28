@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node ../../libs/config/validate-env.cjs admin-web && next dev",
     "build": "node ../../libs/config/validate-env.cjs admin-web && next build",
-    "start": "node ../../libs/config/validate-env.cjs admin-web && next start"
+    "start": "node ../../libs/config/validate-env.cjs admin-web && next start",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@tanstack/react-table": "^8.20.5",

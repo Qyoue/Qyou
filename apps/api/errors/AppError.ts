@@ -30,3 +30,9 @@ export class AuthError extends AppError {
     super(message, 401, 'AUTH_ERROR');
   }
 }
+
+export class ForbiddenError extends AppError {
+  constructor(message = 'Access denied') {
+    super(message, 403, 'FORBIDDEN');
+  }
+}

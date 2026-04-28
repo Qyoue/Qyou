@@ -147,6 +147,7 @@ export const cacheLocations = async (
 export const getNearbyFromCache = async (query: NearbyQuery): Promise<NearbyResult[] | null> => {
   const client = await getClient();
   if (!client) {
+    logger.debug('Location cache unavailable; falling back to MongoDB');
     return null;
   }
 

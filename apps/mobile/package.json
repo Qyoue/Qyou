@@ -8,7 +8,8 @@
     "android": "node ../../libs/config/validate-env.cjs mobile && expo start --android",
     "ios": "node ../../libs/config/validate-env.cjs mobile && expo start --ios",
     "web": "node ../../libs/config/validate-env.cjs mobile && expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.1.0",
