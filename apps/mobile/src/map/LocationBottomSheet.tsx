@@ -237,6 +237,11 @@ export function LocationBottomSheet({
           {details.status ? <Text style={styles.row}>Status: {details.status}</Text> : null}
           <View style={styles.snapshotCard}>
             <Text style={styles.snapshotTitle}>Live queue signal</Text>
+            {details.queueSnapshot?.isStale && (
+              <View style={styles.staleWarning}>
+                <Text style={styles.staleWarningText}>⚠ Data may be outdated — no recent reports</Text>
+              </View>
+            )}
             <Text style={styles.snapshotMetric}>
               Level: {details.queueSnapshot?.level || "unknown"}
             </Text>
@@ -327,6 +332,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     marginBottom: 8,
+  },
+  staleWarning: {
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.4)",
+  },
+  staleWarningText: {
+    color: "#f59e0b",
+    fontSize: 12,
+    fontWeight: "600",
   },
   snapshotMetric: {
     color: "#dce7f0",
