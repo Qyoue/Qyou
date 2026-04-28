@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Coordinate } from "../map/types";
+import type { QueueSnapshot } from "@qyou/types";
 
 const MAX_LOCATION_CACHE = 1500;
 const MAX_AREA_KEYS = 250;
@@ -11,6 +12,7 @@ export type NearbyLocation = {
   address: string;
   distanceFromUser: number;
   coordinate: Coordinate;
+  queueSnapshot?: QueueSnapshot;
 };
 
 type LocationsState = {
@@ -25,6 +27,7 @@ type LocationsState = {
   markPolled: (center: Coordinate) => void;
   hasFetchedArea: (key: string) => boolean;
   markFetchedArea: (key: string) => void;
+  optimisticUpdateSnapshot: (locationId: string, snapshot: QueueSnapshot) => void;
 };
 
 export const useLocationsStore = create<LocationsState>((set, get) => ({
@@ -78,5 +81,16 @@ export const useLocationsStore = create<LocationsState>((set, get) => ({
       }
 
       return { fetchedAreaKeys: next };
+    }),
+  optimisticUpdateSnapshot: (locationId, snapshot) =>
+    set((state) => {
+      const existing = state.locationsById[locationId];
+      if (!existing) return state;
+      return {
+        locationsById: {
+          ...state.locationsById,
+          [locationId]: { ...existing, queueSnapshot: snapshot },
+        },
+      };
     }),
 }));
