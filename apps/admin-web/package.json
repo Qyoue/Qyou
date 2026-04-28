@@ -1,0 +1,30 @@
+{
+  "name": "admin-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ../../libs/config/validate-env.cjs admin-web && next dev",
+    "build": "node ../../libs/config/validate-env.cjs admin-web && next build",
+    "start": "node ../../libs/config/validate-env.cjs admin-web && next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^8.20.5",
+    "@hookform/resolvers": "^3.9.1",
+    "leaflet": "^1.9.4",
+    "jose": "^6.1.0",
+    "next": "16.1.4",
+    "react-hook-form": "^7.53.1",
+    "react-leaflet": "^5.0.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.16",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}

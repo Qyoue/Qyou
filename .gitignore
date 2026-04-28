@@ -36,3 +36,8 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Local planning artifacts
+docs/mvp-sprints/
+scripts/generate-mvp-sprint-backlogs.mjs
+scripts/import-sprint-issues-to-gh.mjs

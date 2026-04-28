@@ -102,8 +102,6 @@ export default function RootLayout() {
         <Stack.Screen name="profile" />
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
-        <Stack.Screen name="location/[id]" options={{ presentation: "card" }} />
-        <Stack.Screen name="report-composer" options={{ presentation: "modal" }} />
       </Stack>
       <NetworkStatusBanner />
     </>

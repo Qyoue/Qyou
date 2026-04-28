@@ -1,135 +1,224 @@
-# Turborepo starter
+# Qyou
 
-This Turborepo starter is maintained by the Turborepo core team.
+**Qyou** is an open-source, crowd-powered queuing intelligence platform that helps people avoid long lines at real-world locations like banks, hospitals, fuel stations, government offices, and service centers.
 
-## Using this example
+By allowing users to report and view real-time wait times, **Qyou** turns everyday queuing into shared public data. Built on **Stellar**, the platform adds a lightweight trust, rewards, and incentives layer—encouraging honest reporting and enabling new queue-based micro-economies.
 
-Run the following command:
+---
 
-```sh
-npx create-turbo@latest
-```
+## Why Qyou?
 
-## What's inside?
+Queues waste time, energy, and productivity—especially in high-traffic public services. Yet queue information is usually invisible until you arrive.
 
-This Turborepo includes the following packages/apps:
+Qyou makes wait times _visible before you commit_.
 
-### Apps and Packages
+With Qyou, users can:
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- Check real-time queue conditions before leaving home
+- Decide the best time to visit a location
+- Earn rewards for contributing accurate queue data
+- Hire or become a **queue buddy**—someone who holds a spot in line on your behalf
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+By combining crowd-sourced data with blockchain-backed incentives, Qyou creates a system where truthful reporting is rewarded and time is treated as a valuable resource.
 
-### Utilities
+---
 
-This Turborepo has some additional tools already setup for you:
+## Core Features
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+- **Real-Time Queue Reporting** – Users submit live wait-time updates at locations
+- **Crowd Verification** – Multiple reports improve accuracy and confidence
+- **Queue Discovery** – View nearby locations and their current wait times
+- **Queue Buddies** – Hire trusted users to hold a spot in line for you
+- **Stellar-Powered Rewards** – Earn tokens for verified reports and services
+- **Reputation & Trust** – On-chain signals back honest contributors
+- **Mobile-First Experience** – Designed for fast, on-the-go reporting
 
-### Build
+---
 
-To build all apps and packages, run the following command:
+## Architecture Overview
 
-```
-cd my-turborepo
+Qyou is designed as a scalable monorepo with clear separation between user experience, core logic, and blockchain integration.
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
+| Layer           | Technology                          |
+| --------------- | ----------------------------------- |
+| **Mobile App**  | React Native (Expo)                 |
+| **Admin Web**   | Next.js (React)                     |
+| **Backend API** | Node.js (Express Modular Monolith)  |
+| **Database**    | MongoDB                             |
+| **Blockchain**  | **Stellar**                         |
+| **Payments**    | Stellar micro-payments & incentives |
+| **Auth**        | Token-based auth                    |
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
+---
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+## Monorepo Structure
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+The monorepo structure enables rapid iteration while keeping responsibilities isolated:
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+```text
+Qyou/
+├── apps/
+│   ├── mobile/              # User-facing Mobile App (Expo)
+│   ├── admin-web/           # Admin Dashboard (Next.js)
+│   └── api/                 # Backend API (Express)
+├── libs/
+│   ├── config/              # Shared configuration
+│   ├── logger/              # Shared logging utilities
+│   └── types/               # Shared TypeScript interfaces
+├── stellar/
+│   ├── client/              # Stellar SDK & interaction scripts
+│   └── contracts/           # Soroban Smart Contracts (Future)
+├── .env                     # Environment variables
+├── package.json             # Workspaces configuration
+└── README.md
 
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+---
 
-### Remote Caching
+## Getting Started
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+### Prerequisites
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+- **Node.js** (v18 or higher)
+- **MongoDB** (Running locally or via Atlas)
+- **Stellar Testnet Account** (Optional for reading ledger)
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+### 1. Installation
 
-```
-cd my-turborepo
+Clone the repository and install all dependencies from the root:
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+```bash
+git clone [https://github.com/qyoue/qyou.git](https://github.com/qyoue/qyou.git)
+cd Qyou
+npm install
 
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+### 2. Configuration
+
+Create a `.env` file in the root directory:
+
+```bash
+# API Config
+API_PORT=4000
+MONGO_URI=mongodb://localhost:27017/qyou
+
+# Stellar Config
+STELLAR_NETWORK=TESTNET
+
 ```
 
-## Useful Links
+You can also copy the included templates:
 
-Learn more about the power of Turborepo:
+```bash
+cp .env.example .env
+```
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+Per-workspace templates are available at:
+- `apps/api/.env.example`
+- `apps/admin-web/.env.example`
+- `apps/mobile/.env.example`
+- `stellar/client/.env.example`
+
+### 3. Run Locally (The "All-in-One" Command)
+
+Start the Mobile App, Admin Web, and Backend API simultaneously:
+
+```bash
+npm run dev
+
+```
+
+- **API:** [http://localhost:4000/health](https://www.google.com/search?q=http://localhost:4000/health)
+- **Admin Web:** [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000)
+- **Mobile:** Scan the QR code in the terminal with the Expo Go app.
+
+### 4. Test Stellar Connection
+
+To verify the Stellar blockchain integration is working:
+
+```bash
+cd stellar/client
+npm run test-net
+
+```
+
+### 5. Seed Demo Data
+
+For a demo-ready local database, seed sample users and locations from the API workspace:
+
+```bash
+npm run seed:demo --workspace=apps/api
+```
+
+This command:
+
+- upserts demo admin and user accounts
+- upserts a small set of representative locations
+- writes `apps/api/scripts/output/demo-queue-activity.json` with synthetic queue activity fixtures for future queue-report ingestion
+
+Default demo accounts:
+
+- `admin@qyou.local` / `QyouAdmin123!`
+- `demo-user-1@qyou.local` / `QyouUser123!`
+- `demo-user-2@qyou.local` / `QyouUser123!`
+
+---
+
+## API Highlights
+
+### Queues
+
+- `POST /queues/report` – Submit a wait-time report
+- `GET /queues/nearby` – Discover queues around a location
+- `GET /queues/:id` – View aggregated queue details
+
+### Queue Buddies
+
+- `POST /buddies/request` – Hire a queue buddy
+- `POST /buddies/accept` – Accept a queue task
+- `GET /buddies/:id` – Track queue-holding progress
+
+### Rewards (Stellar)
+
+- `POST /rewards/claim` – Claim earned rewards
+- `GET /rewards/balance` – View reward balance
+
+---
+
+## Blockchain Layer
+
+Qyou uses **Stellar** to:
+
+- Distribute micro-rewards for verified reports
+- Power queue buddy payments
+- Anchor reputation signals and trust scores
+
+---
+
+## Contributing
+
+Qyou is open-source and community-driven. Contributions are welcome across frontend, backend, blockchain, data aggregation, and UX.
+
+### How to Contribute
+
+1. Fork the repository
+2. Create a branch from `main`
+3. Pick an issue or propose a new feature
+4. Keep PRs focused and well-documented
+5. Open a pull request with context and screenshots
+
+---
+
+## 💬 Community & Support
+
+For questions, feature discussions, or collaboration:
+
+👉 Telegram: [https://t.me/+gRA3CdyekZw3MWM0](https://t.me/+gRA3CdyekZw3MWM0)
+
+---
+
+## 📄 License
+
+MIT License

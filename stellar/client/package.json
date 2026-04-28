@@ -1,0 +1,26 @@
+{
+  "name": "@qyou/stellar",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node ../../libs/config/validate-env.cjs stellar && tsc",
+    "watch": "tsc -w",
+    "test-net": "node ../../libs/config/validate-env.cjs stellar && tsx src/test-wallet.ts",
+    "wallet-check": "node ../../libs/config/validate-env.cjs stellar && tsx src/cli.ts wallet-check",
+    "payment-dry-run": "node ../../libs/config/validate-env.cjs stellar && tsx src/cli.ts payment-dry-run",
+    "typecheck": "node ../../libs/config/validate-env.cjs stellar && tsc --noEmit"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^12.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.1",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
