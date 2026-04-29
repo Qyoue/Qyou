@@ -7,6 +7,7 @@ type SearchParams = {
   dir?: string;
   search?: string;
   type?: string;
+  status?: string;
 };
 
 const toPositiveInt = (v: string | undefined, fallback: number) => {
@@ -27,6 +28,7 @@ export default async function AdminLocationsPage(props: {
       dir={sp.dir === "asc" ? "asc" : "desc"}
       search={sp.search ?? ""}
       type={sp.type ?? ""}
+      status={sp.status ?? ""}
     />
   );
 }

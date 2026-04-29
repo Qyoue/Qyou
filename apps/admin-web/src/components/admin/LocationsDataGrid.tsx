@@ -30,6 +30,7 @@ type GridProps = {
   dir: "asc" | "desc";
   search: string;
   typeFilter: string;
+  statusFilter: string;
 };
 
 const SORTABLE_FIELDS = new Set(["name", "type", "status", "address", "createdAt"]);
@@ -111,6 +112,7 @@ export default function LocationsDataGrid(props: GridProps) {
       dir: props.dir,
       search: props.search || undefined,
       type: props.typeFilter || undefined,
+      status: props.statusFilter || undefined,
       ...overrides,
     });
   };
@@ -139,6 +141,11 @@ export default function LocationsDataGrid(props: GridProps) {
             <option value="government">Government</option>
             <option value="fuel_station">Fuel Station</option>
             <option value="other">Other</option>
+          </select>
+          <select className={styles.select} name="status" defaultValue={props.statusFilter}>
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Stale / Inactive</option>
           </select>
           <button className={styles.filterBtn} type="submit">
             Apply
