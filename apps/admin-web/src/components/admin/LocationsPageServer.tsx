@@ -9,6 +9,7 @@ interface Props {
   dir: "asc" | "desc";
   search: string;
   type: string;
+  status: string;
 }
 
 /**
@@ -23,6 +24,7 @@ export default async function LocationsPageServer({
   dir,
   search,
   type,
+  status,
 }: Props) {
   const cookieStore = await cookies();
   const token = cookieStore.get(process.env.ADMIN_AUTH_COOKIE || "admin_token")?.value ?? "";
@@ -36,6 +38,7 @@ export default async function LocationsPageServer({
     const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize), sort, dir });
     if (search) query.set("search", search);
     if (type) query.set("type", type);
+    if (status) query.set("status", status);
 
     try {
       const res = await fetch(`${apiBase}/admin/locations?${query}`, {
@@ -66,6 +69,7 @@ export default async function LocationsPageServer({
       dir={dir}
       search={search}
       typeFilter={type}
+      statusFilter={status}
     />
   );
 }
