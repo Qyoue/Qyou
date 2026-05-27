@@ -1,0 +1,21 @@
+{
+  "name": "@qyou/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build --webpack",
+    "dev": "next dev --webpack",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "next": "16.1.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2"
+  }
+}

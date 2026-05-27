@@ -1,22 +1,20 @@
 {
-  "name": "@qyou/api",
+  "name": "@qyou/config",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": "./dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "tsx watch src/index.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "dotenv": "^17.2.3"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.3",
-    "@types/node": "^24.10.1",
-    "tsx": "^4.20.6"
+    "@types/node": "^24.10.1"
   }
 }

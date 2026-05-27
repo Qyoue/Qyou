@@ -1,0 +1,32 @@
+:root {
+  color-scheme: light;
+  --background: #f6f1e8;
+  --surface: rgba(255, 255, 255, 0.82);
+  --foreground: #1d1d1b;
+  --muted: #5d605a;
+  --line: rgba(29, 29, 27, 0.1);
+  --accent: #dd5f34;
+  --accent-strong: #a83d1b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(221, 95, 52, 0.14), transparent 28%),
+    linear-gradient(180deg, #fbf7ef 0%, #f0e8db 100%);
+  color: var(--foreground);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+a {
+  color: inherit;
+}
