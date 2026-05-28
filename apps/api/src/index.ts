@@ -1,5 +1,8 @@
 import cors from "cors";
 import express from "express";
+import type { Request, Response } from "express";
+import { register } from "./auth/registration.js";
+import type { RegistrationInput } from "@qyou/types";
 
 type ServiceStatus = {
   ok: boolean;
@@ -39,6 +42,40 @@ app.get("/api/v1/auth/bootstrap", (_request, response) => {
   };
 
   response.json(payload);
+});
+
+/**
+ * POST /api/v1/auth/register
+ *
+ * Body: { email, password, displayName? }
+ * 201  → { ok: true, accountId, email, status }
+ * 400  → { ok: false, code: "VALIDATION_ERROR", message }
+ * 409  → { ok: false, code: "DUPLICATE_EMAIL", message }
+ * 429  → { ok: false, code: "RATE_LIMITED", message }
+ * 500  → { ok: false, code: "INTERNAL_ERROR", message }
+ */
+app.post("/api/v1/auth/register", (request: Request, response: Response) => {
+  const ip =
+    (request.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ??
+    request.socket.remoteAddress ??
+    "unknown";
+
+  const input = request.body as RegistrationInput;
+  const result = register(input, ip);
+
+  if (result.ok) {
+    response.status(201).json(result);
+    return;
+  }
+
+  const statusMap: Record<string, number> = {
+    VALIDATION_ERROR: 400,
+    DUPLICATE_EMAIL: 409,
+    RATE_LIMITED: 429,
+    INTERNAL_ERROR: 500,
+  };
+
+  response.status(statusMap[result.code] ?? 500).json(result);
 });
 
 app.listen(port, () => {
