@@ -42,3 +42,27 @@ export type RegistrationErrorCode =
   | "DUPLICATE_EMAIL"
   | "RATE_LIMITED"
   | "INTERNAL_ERROR";
+
+// --- Login / Token Issuance ---
+
+export type LoginInput = {
+  email: string;
+  password: string;
+};
+
+export type TokenPair = {
+  accessToken: string;
+  /** ISO-8601 expiry of the access token */
+  expiresAt: string;
+  refreshToken: string;
+};
+
+export type LoginResult =
+  | { ok: true; accountId: string; email: string; tokens: TokenPair }
+  | { ok: false; code: LoginErrorCode; message: string };
+
+export type LoginErrorCode =
+  | "VALIDATION_ERROR"
+  | "INVALID_CREDENTIALS"
+  | "RATE_LIMITED"
+  | "INTERNAL_ERROR";
