@@ -4,7 +4,8 @@ import type { Request, Response } from "express";
 import { register } from "./auth/registration.js";
 import { login } from "./auth/login.js";
 import { refresh, logout } from "./auth/session.js";
-import type { LoginInput, LogoutInput, RefreshInput, RegistrationInput } from "@qyou/types";
+import { verify } from "./auth/verification.js";
+import type { LoginInput, LogoutInput, RefreshInput, RegistrationInput, VerificationInput } from "@qyou/types";
 
 type ServiceStatus = {
   ok: boolean;
@@ -160,6 +161,41 @@ app.post("/api/v1/auth/logout", (request: Request, response: Response) => {
 
   const statusMap: Record<string, number> = {
     VALIDATION_ERROR: 400,
+    INTERNAL_ERROR: 500,
+  };
+
+  response.status(statusMap[result.code] ?? 500).json(result);
+});
+
+/**
+ * POST /api/v1/auth/verify
+ *
+ * Body: { token }
+ * 200  → { ok: true, accountId, email }
+ * 400  → { ok: false, code: "VALIDATION_ERROR" | "ALREADY_VERIFIED", message }
+ * 401  → { ok: false, code: "INVALID_VERIFICATION_TOKEN", message }
+ * 429  → { ok: false, code: "RATE_LIMITED", message }
+ * 500  → { ok: false, code: "INTERNAL_ERROR", message }
+ */
+app.post("/api/v1/auth/verify", (request: Request, response: Response) => {
+  const ip =
+    (request.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ??
+    request.socket.remoteAddress ??
+    "unknown";
+
+  const input = request.body as VerificationInput;
+  const result = verify(input, ip);
+
+  if (result.ok) {
+    response.status(200).json(result);
+    return;
+  }
+
+  const statusMap: Record<string, number> = {
+    VALIDATION_ERROR: 400,
+    ALREADY_VERIFIED: 400,
+    INVALID_VERIFICATION_TOKEN: 401,
+    RATE_LIMITED: 429,
     INTERNAL_ERROR: 500,
   };
 
