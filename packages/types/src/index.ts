@@ -90,6 +90,23 @@ export type SessionErrorCode =
   | "INVALID_REFRESH_TOKEN"
   | "INTERNAL_ERROR";
 
+// --- Email Verification (AUTH-021) ---
+
+export type VerificationInput = {
+  token: string;
+};
+
+export type VerificationResult =
+  | { ok: true; accountId: string; email: string }
+  | { ok: false; code: VerificationErrorCode; message: string };
+
+export type VerificationErrorCode =
+  | "VALIDATION_ERROR"
+  | "INVALID_VERIFICATION_TOKEN"
+  | "ALREADY_VERIFIED"
+  | "RATE_LIMITED"
+  | "INTERNAL_ERROR";
+
 // --- Password Reset (AUTH-016) ---
 
 export type PasswordResetRequestInput = {
