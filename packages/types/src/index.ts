@@ -66,3 +66,26 @@ export type LoginErrorCode =
   | "INVALID_CREDENTIALS"
   | "RATE_LIMITED"
   | "INTERNAL_ERROR";
+
+// --- Session: Refresh & Logout ---
+
+export type RefreshInput = {
+  refreshToken: string;
+};
+
+export type RefreshResult =
+  | { ok: true; tokens: TokenPair }
+  | { ok: false; code: SessionErrorCode; message: string };
+
+export type LogoutInput = {
+  refreshToken: string;
+};
+
+export type LogoutResult =
+  | { ok: true }
+  | { ok: false; code: SessionErrorCode; message: string };
+
+export type SessionErrorCode =
+  | "VALIDATION_ERROR"
+  | "INVALID_REFRESH_TOKEN"
+  | "INTERNAL_ERROR";
