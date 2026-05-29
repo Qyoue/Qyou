@@ -3,7 +3,8 @@ import express from "express";
 import type { Request, Response } from "express";
 import { register } from "./auth/registration.js";
 import { login } from "./auth/login.js";
-import type { LoginInput, RegistrationInput } from "@qyou/types";
+import { refresh, logout } from "./auth/session.js";
+import type { LoginInput, LogoutInput, RefreshInput, RegistrationInput } from "@qyou/types";
 
 type ServiceStatus = {
   ok: boolean;
@@ -107,6 +108,58 @@ app.post("/api/v1/auth/login", (request: Request, response: Response) => {
     VALIDATION_ERROR: 400,
     INVALID_CREDENTIALS: 401,
     RATE_LIMITED: 429,
+    INTERNAL_ERROR: 500,
+  };
+
+  response.status(statusMap[result.code] ?? 500).json(result);
+});
+
+/**
+ * POST /api/v1/auth/refresh
+ *
+ * Body: { refreshToken }
+ * 200  → { ok: true, tokens: { accessToken, expiresAt, refreshToken } }
+ * 400  → { ok: false, code: "VALIDATION_ERROR", message }
+ * 401  → { ok: false, code: "INVALID_REFRESH_TOKEN", message }
+ * 500  → { ok: false, code: "INTERNAL_ERROR", message }
+ */
+app.post("/api/v1/auth/refresh", (request: Request, response: Response) => {
+  const input = request.body as RefreshInput;
+  const result = refresh(input);
+
+  if (result.ok) {
+    response.status(200).json(result);
+    return;
+  }
+
+  const statusMap: Record<string, number> = {
+    VALIDATION_ERROR: 400,
+    INVALID_REFRESH_TOKEN: 401,
+    INTERNAL_ERROR: 500,
+  };
+
+  response.status(statusMap[result.code] ?? 500).json(result);
+});
+
+/**
+ * POST /api/v1/auth/logout
+ *
+ * Body: { refreshToken }
+ * 200  → { ok: true }
+ * 400  → { ok: false, code: "VALIDATION_ERROR", message }
+ * 500  → { ok: false, code: "INTERNAL_ERROR", message }
+ */
+app.post("/api/v1/auth/logout", (request: Request, response: Response) => {
+  const input = request.body as LogoutInput;
+  const result = logout(input);
+
+  if (result.ok) {
+    response.status(200).json(result);
+    return;
+  }
+
+  const statusMap: Record<string, number> = {
+    VALIDATION_ERROR: 400,
     INTERNAL_ERROR: 500,
   };
 
