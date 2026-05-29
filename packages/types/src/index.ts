@@ -89,3 +89,28 @@ export type SessionErrorCode =
   | "VALIDATION_ERROR"
   | "INVALID_REFRESH_TOKEN"
   | "INTERNAL_ERROR";
+
+// --- Password Reset (AUTH-016) ---
+
+export type PasswordResetRequestInput = {
+  email: string;
+};
+
+export type PasswordResetRequestResult =
+  | { ok: true }
+  | { ok: false; code: PasswordResetErrorCode; message: string };
+
+export type PasswordResetConfirmInput = {
+  token: string;
+  newPassword: string;
+};
+
+export type PasswordResetConfirmResult =
+  | { ok: true }
+  | { ok: false; code: PasswordResetErrorCode; message: string };
+
+export type PasswordResetErrorCode =
+  | "VALIDATION_ERROR"
+  | "INVALID_RESET_TOKEN"
+  | "RATE_LIMITED"
+  | "INTERNAL_ERROR";
