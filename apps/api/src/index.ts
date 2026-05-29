@@ -4,15 +4,8 @@ import type { Request, Response } from "express";
 import { register } from "./auth/registration.js";
 import { login } from "./auth/login.js";
 import { refresh, logout } from "./auth/session.js";
-import { requestReset, confirmReset } from "./auth/password-reset.js";
-import type {
-  LoginInput,
-  LogoutInput,
-  PasswordResetConfirmInput,
-  PasswordResetRequestInput,
-  RefreshInput,
-  RegistrationInput,
-} from "@qyou/types";
+import { verify } from "./auth/verification.js";
+import type { LoginInput, LogoutInput, RefreshInput, RegistrationInput, VerificationInput } from "@qyou/types";
 
 type ServiceStatus = {
   ok: boolean;
@@ -175,21 +168,23 @@ app.post("/api/v1/auth/logout", (request: Request, response: Response) => {
 });
 
 /**
- * POST /api/v1/auth/password-reset/request
+ * POST /api/v1/auth/verify
  *
- * Body: { email }
- * 200  → { ok: true }
- * 400  → { ok: false, code: "VALIDATION_ERROR", message }
+ * Body: { token }
+ * 200  → { ok: true, accountId, email }
+ * 400  → { ok: false, code: "VALIDATION_ERROR" | "ALREADY_VERIFIED", message }
+ * 401  → { ok: false, code: "INVALID_VERIFICATION_TOKEN", message }
+ * 429  → { ok: false, code: "RATE_LIMITED", message }
  * 500  → { ok: false, code: "INTERNAL_ERROR", message }
  */
-app.post("/api/v1/auth/password-reset/request", (request: Request, response: Response) => {
+app.post("/api/v1/auth/verify", (request: Request, response: Response) => {
   const ip =
     (request.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ??
     request.socket.remoteAddress ??
     "unknown";
 
-  const input = request.body as PasswordResetRequestInput;
-  const result = requestReset(input, ip);
+  const input = request.body as VerificationInput;
+  const result = verify(input, ip);
 
   if (result.ok) {
     response.status(200).json(result);
@@ -198,33 +193,9 @@ app.post("/api/v1/auth/password-reset/request", (request: Request, response: Res
 
   const statusMap: Record<string, number> = {
     VALIDATION_ERROR: 400,
-    INTERNAL_ERROR: 500,
-  };
-
-  response.status(statusMap[result.code] ?? 500).json(result);
-});
-
-/**
- * POST /api/v1/auth/password-reset/confirm
- *
- * Body: { token, newPassword }
- * 200  → { ok: true }
- * 400  → { ok: false, code: "VALIDATION_ERROR", message }
- * 401  → { ok: false, code: "INVALID_RESET_TOKEN", message }
- * 500  → { ok: false, code: "INTERNAL_ERROR", message }
- */
-app.post("/api/v1/auth/password-reset/confirm", (request: Request, response: Response) => {
-  const input = request.body as PasswordResetConfirmInput;
-  const result = confirmReset(input);
-
-  if (result.ok) {
-    response.status(200).json(result);
-    return;
-  }
-
-  const statusMap: Record<string, number> = {
-    VALIDATION_ERROR: 400,
-    INVALID_RESET_TOKEN: 401,
+    ALREADY_VERIFIED: 400,
+    INVALID_VERIFICATION_TOKEN: 401,
+    RATE_LIMITED: 429,
     INTERNAL_ERROR: 500,
   };
 
