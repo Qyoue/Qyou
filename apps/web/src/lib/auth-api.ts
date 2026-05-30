@@ -22,6 +22,10 @@ export type VerifyResult =
   | { ok: true; accountId: string; status: string; verifiedAt: string }
   | { ok: false; code: string; message: string };
 
+export type ResetRequestResult = { ok: true } | { ok: false; code: string; message: string };
+export type ResetConfirmResult = { ok: true } | { ok: false; code: string; message: string };
+export type VerifyResult = { ok: true; accountId: string; email: string } | { ok: false; code: string; message: string };
+
 export async function registerAccount(input: RegistrationInput): Promise<RegistrationResult> {
   const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
     method: "POST",
@@ -38,6 +42,24 @@ export async function loginAccount(input: LoginInput): Promise<LoginResult> {
     body: JSON.stringify(input),
   });
   return res.json() as Promise<LoginResult>;
+}
+
+export async function requestPasswordReset(email: string): Promise<ResetRequestResult> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/password-reset/request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  return res.json() as Promise<ResetRequestResult>;
+}
+
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<ResetConfirmResult> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/password-reset/confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, newPassword }),
+  });
+  return res.json() as Promise<ResetConfirmResult>;
 }
 
 export async function verifyEmailToken(token: string): Promise<VerifyResult> {

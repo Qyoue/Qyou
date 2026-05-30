@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { loginAccount, verifyEmailToken } from "../lib/auth-api";
+import { confirmPasswordReset, loginAccount, requestPasswordReset, verifyEmailToken } from "../lib/auth-api";
 import { logAuth } from "../lib/auth-logger";
 
 const MIN_PASSWORD_LEN = 8;
@@ -24,6 +24,10 @@ export default function LoginForm() {
   const [state, setState] = useState<State>({ status: "idle" });
   const [lastSubmitMs, setLastSubmitMs] = useState(0);
   const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetMsg, setResetMsg] = useState("");
   const [verifyToken, setVerifyToken] = useState("");
   const [verifyMsg, setVerifyMsg] = useState("");
 
@@ -82,13 +86,91 @@ export default function LoginForm() {
       {showReset && (
         <section aria-live="polite">
           <p>Password reset flow</p>
-          <ol>
-            <li>Submit account email.</li>
-            <li>Receive reset link token in email.</li>
-            <li>Open reset link and set a new password.</li>
-            <li>Re-login with new credentials.</li>
-          </ol>
-          <p>Failure states: unknown email, expired token, weak password, replayed token.</p>
+          <label htmlFor="reset-email">Reset email</label>
+          <input id="reset-email" type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
+          <button
+            type="button"
+            onClick={async () => {
+              logAuth("info", "RESET_REQUEST_ATTEMPT", { email: resetEmail });
+              try {
+                const result = await requestPasswordReset(resetEmail);
+                if (result.ok) {
+                  setResetMsg("If the email exists, a reset link has been sent.");
+                  logAuth("info", "RESET_REQUEST_OK", { email: resetEmail });
+                } else {
+                  setResetMsg("Unable to process reset request.");
+                  logAuth("warn", "RESET_REQUEST_ERROR", { code: result.code });
+                }
+              } catch {
+                setResetMsg("Network error while requesting reset.");
+                logAuth("error", "RESET_REQUEST_ERROR", { reason: "network" });
+              }
+            }}
+          >
+            Request reset
+          </button>
+          <label htmlFor="reset-token">Reset token</label>
+          <input id="reset-token" type="text" value={resetToken} onChange={(e) => setResetToken(e.target.value)} />
+          <label htmlFor="reset-password">New password</label>
+          <input id="reset-password" type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} />
+          <button
+            type="button"
+            onClick={async () => {
+              if (resetPassword.length < MIN_PASSWORD_LEN) {
+                setResetMsg(`Password must be at least ${MIN_PASSWORD_LEN} characters.`);
+                return;
+              }
+              logAuth("info", "RESET_CONFIRM_ATTEMPT", {});
+              try {
+                const result = await confirmPasswordReset(resetToken, resetPassword);
+                if (result.ok) {
+                  setResetMsg("Password reset complete. Sign in with your new password.");
+                  setResetToken("");
+                  setResetPassword("");
+                  logAuth("info", "RESET_CONFIRM_OK", {});
+                } else {
+                  setResetMsg("Reset token is invalid or expired.");
+                  logAuth("warn", "RESET_CONFIRM_ERROR", { code: result.code });
+                }
+              } catch {
+                setResetMsg("Network error while confirming reset.");
+                logAuth("error", "RESET_CONFIRM_ERROR", { reason: "network" });
+              }
+            }}
+          >
+            Confirm reset
+          </button>
+          {resetMsg && <p role="status">{resetMsg}</p>}
+          <hr />
+          <p>Email verification</p>
+          <label htmlFor="verify-token">Verification token</label>
+          <input id="verify-token" type="text" value={verifyToken} onChange={(e) => setVerifyToken(e.target.value)} />
+          <button
+            type="button"
+            onClick={async () => {
+              if (verifyToken.trim().length !== 36) {
+                setVerifyMsg("Verification token format is invalid.");
+                return;
+              }
+              logAuth("info", "VERIFY_ATTEMPT", {});
+              try {
+                const result = await verifyEmailToken(verifyToken);
+                if (result.ok) {
+                  setVerifyMsg(`Email verified for ${result.email}.`);
+                  logAuth("info", "VERIFY_OK", { accountId: result.accountId });
+                } else {
+                  setVerifyMsg("Verification token is invalid or expired.");
+                  logAuth("warn", "VERIFY_ERROR", { code: result.code });
+                }
+              } catch {
+                setVerifyMsg("Network error while verifying email.");
+                logAuth("error", "VERIFY_ERROR", { reason: "network" });
+              }
+            }}
+          >
+            Verify email
+          </button>
+          {verifyMsg && <p role="status">{verifyMsg}</p>}
         </section>
       )}
       <section aria-live="polite" style={{ marginTop: "1rem" }}>

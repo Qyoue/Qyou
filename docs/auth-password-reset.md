@@ -162,3 +162,6 @@ node --import tsx/esm --test src/auth/registration.test.ts src/auth/login.test.t
 ## Verification Notes
 - From `/login`, toggle password reset section and verify all flow/failure states are visible.
 - Confirm login logger emits checkpoints (`LOGIN_ATTEMPT`, `LOGIN_INVALID`, `LOGIN_OK`, `LOGIN_ERROR`).
+- Confirm reset instrumentation emits:
+  - `RESET_REQUEST_ATTEMPT`, `RESET_REQUEST_OK|RESET_REQUEST_ERROR`
+  - `RESET_CONFIRM_ATTEMPT`, `RESET_CONFIRM_OK|RESET_CONFIRM_ERROR`
