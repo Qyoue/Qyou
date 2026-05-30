@@ -100,7 +100,7 @@ describe("verify — already verified", () => {
     seedAccount(account);
     const token = issueVerificationToken(account.id);
 
-    const result = verify({ token }, IP);
+    const result = verify({ token }, "2.2.2.2");
     assert.equal(result.ok, false);
     if (result.ok) throw new Error("unreachable");
     assert.equal(result.code, "ALREADY_VERIFIED");
