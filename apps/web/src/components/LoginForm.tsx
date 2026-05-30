@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { confirmPasswordReset, loginAccount, requestPasswordReset } from "../lib/auth-api";
+import { confirmPasswordReset, loginAccount, requestPasswordReset, verifyEmailToken } from "../lib/auth-api";
 import { logAuth } from "../lib/auth-logger";
 
 const MIN_PASSWORD_LEN = 8;
@@ -28,6 +28,8 @@ export default function LoginForm() {
   const [resetToken, setResetToken] = useState("");
   const [resetPassword, setResetPassword] = useState("");
   const [resetMsg, setResetMsg] = useState("");
+  const [verifyToken, setVerifyToken] = useState("");
+  const [verifyMsg, setVerifyMsg] = useState("");
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -139,6 +141,36 @@ export default function LoginForm() {
             Confirm reset
           </button>
           {resetMsg && <p role="status">{resetMsg}</p>}
+          <hr />
+          <p>Email verification</p>
+          <label htmlFor="verify-token">Verification token</label>
+          <input id="verify-token" type="text" value={verifyToken} onChange={(e) => setVerifyToken(e.target.value)} />
+          <button
+            type="button"
+            onClick={async () => {
+              if (verifyToken.trim().length !== 36) {
+                setVerifyMsg("Verification token format is invalid.");
+                return;
+              }
+              logAuth("info", "VERIFY_ATTEMPT", {});
+              try {
+                const result = await verifyEmailToken(verifyToken);
+                if (result.ok) {
+                  setVerifyMsg(`Email verified for ${result.email}.`);
+                  logAuth("info", "VERIFY_OK", { accountId: result.accountId });
+                } else {
+                  setVerifyMsg("Verification token is invalid or expired.");
+                  logAuth("warn", "VERIFY_ERROR", { code: result.code });
+                }
+              } catch {
+                setVerifyMsg("Network error while verifying email.");
+                logAuth("error", "VERIFY_ERROR", { reason: "network" });
+              }
+            }}
+          >
+            Verify email
+          </button>
+          {verifyMsg && <p role="status">{verifyMsg}</p>}
         </section>
       )}
     </form>
