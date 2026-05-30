@@ -173,6 +173,29 @@ export default function LoginForm() {
           {verifyMsg && <p role="status">{verifyMsg}</p>}
         </section>
       )}
+      <section aria-live="polite" style={{ marginTop: "1rem" }}>
+        <label htmlFor="verify-token">Verification token</label>
+        <input id="verify-token" type="text" value={verifyToken} onChange={(e) => setVerifyToken(e.target.value)} />
+        <button
+          type="button"
+          onClick={async () => {
+            const token = verifyToken.trim();
+            if (token.length !== 36) {
+              setVerifyMsg("Token must be 36 characters.");
+              return;
+            }
+            try {
+              const result = await verifyEmailToken(token);
+              setVerifyMsg(result.ok ? "Email verified successfully." : "Verification failed.");
+            } catch {
+              setVerifyMsg("Network error while verifying email.");
+            }
+          }}
+        >
+          Verify email
+        </button>
+        {verifyMsg && <p role="status">{verifyMsg}</p>}
+      </section>
     </form>
   );
 }

@@ -18,6 +18,9 @@ export type LoginInput = {
 export type LoginResult =
   | { ok: true; accountId: string; email: string; tokens: { accessToken: string; expiresAt: string; refreshToken: string } }
   | { ok: false; code: string; message: string };
+export type VerifyResult =
+  | { ok: true; accountId: string; status: string; verifiedAt: string }
+  | { ok: false; code: string; message: string };
 
 export type ResetRequestResult = { ok: true } | { ok: false; code: string; message: string };
 export type ResetConfirmResult = { ok: true } | { ok: false; code: string; message: string };

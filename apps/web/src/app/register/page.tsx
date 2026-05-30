@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import RegisterForm from "../../components/RegisterForm";
+import AuthSessionShell from "../../components/AuthSessionShell";
 
 export const metadata: Metadata = {
   title: "Create account — Qyou",
@@ -8,16 +9,8 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   return (
-    <main
-      style={{
-        alignItems: "center",
-        display: "flex",
-        justifyContent: "center",
-        minHeight: "100vh",
-        padding: "2rem 1rem",
-      }}
-    >
+    <AuthSessionShell title="Create account" subtitle="Start with a secure account before joining sessions.">
       <RegisterForm />
-    </main>
+    </AuthSessionShell>
   );
 }
