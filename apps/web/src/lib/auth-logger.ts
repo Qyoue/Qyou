@@ -19,7 +19,13 @@ export type AuthEvent =
   | "LOGIN_ATTEMPT"
   | "LOGIN_INVALID"
   | "LOGIN_OK"
-  | "LOGIN_ERROR";
+  | "LOGIN_ERROR"
+  | "RESET_REQUEST_ATTEMPT"
+  | "RESET_REQUEST_OK"
+  | "RESET_REQUEST_ERROR"
+  | "RESET_CONFIRM_ATTEMPT"
+  | "RESET_CONFIRM_OK"
+  | "RESET_CONFIRM_ERROR";
 
 export function logAuth(
   level: LogLevel,
