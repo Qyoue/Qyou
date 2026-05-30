@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LoginForm from "../../../src/components/LoginForm";
+import AuthSessionShell from "../../../src/components/AuthSessionShell";
 
 export const metadata: Metadata = {
   title: "Login — Qyou",
@@ -8,9 +9,8 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main style={{ maxWidth: 480, margin: "4rem auto", padding: "1rem" }}>
-      <h1>Sign in</h1>
+    <AuthSessionShell title="Sign in" subtitle="Use your email and password to restore your authenticated session.">
       <LoginForm />
-    </main>
+    </AuthSessionShell>
   );
 }

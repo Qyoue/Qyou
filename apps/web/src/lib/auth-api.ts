@@ -18,6 +18,9 @@ export type LoginInput = {
 export type LoginResult =
   | { ok: true; accountId: string; email: string; tokens: { accessToken: string; expiresAt: string; refreshToken: string } }
   | { ok: false; code: string; message: string };
+export type VerifyResult =
+  | { ok: true; accountId: string; status: string; verifiedAt: string }
+  | { ok: false; code: string; message: string };
 
 export async function registerAccount(input: RegistrationInput): Promise<RegistrationResult> {
   const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
@@ -35,4 +38,13 @@ export async function loginAccount(input: LoginInput): Promise<LoginResult> {
     body: JSON.stringify(input),
   });
   return res.json() as Promise<LoginResult>;
+}
+
+export async function verifyEmailToken(token: string): Promise<VerifyResult> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  return res.json() as Promise<VerifyResult>;
 }

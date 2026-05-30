@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { loginAccount } from "../lib/auth-api";
+import { loginAccount, verifyEmailToken } from "../lib/auth-api";
 import { logAuth } from "../lib/auth-logger";
 
 const MIN_PASSWORD_LEN = 8;
@@ -24,6 +24,8 @@ export default function LoginForm() {
   const [state, setState] = useState<State>({ status: "idle" });
   const [lastSubmitMs, setLastSubmitMs] = useState(0);
   const [showReset, setShowReset] = useState(false);
+  const [verifyToken, setVerifyToken] = useState("");
+  const [verifyMsg, setVerifyMsg] = useState("");
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -89,6 +91,29 @@ export default function LoginForm() {
           <p>Failure states: unknown email, expired token, weak password, replayed token.</p>
         </section>
       )}
+      <section aria-live="polite" style={{ marginTop: "1rem" }}>
+        <label htmlFor="verify-token">Verification token</label>
+        <input id="verify-token" type="text" value={verifyToken} onChange={(e) => setVerifyToken(e.target.value)} />
+        <button
+          type="button"
+          onClick={async () => {
+            const token = verifyToken.trim();
+            if (token.length !== 36) {
+              setVerifyMsg("Token must be 36 characters.");
+              return;
+            }
+            try {
+              const result = await verifyEmailToken(token);
+              setVerifyMsg(result.ok ? "Email verified successfully." : "Verification failed.");
+            } catch {
+              setVerifyMsg("Network error while verifying email.");
+            }
+          }}
+        >
+          Verify email
+        </button>
+        {verifyMsg && <p role="status">{verifyMsg}</p>}
+      </section>
     </form>
   );
 }
