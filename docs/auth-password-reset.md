@@ -130,3 +130,35 @@ node --import tsx/esm --test src/auth/registration.test.ts src/auth/login.test.t
 - Password hashing uses the same `hashPassword()` helper from `registration.ts`.
 - Refresh-token revocation on confirm reuses `refreshStore` from `login.ts` — iterate and delete all entries matching `accountId`.
 - Email delivery is out of scope for this slice; the service emits a `RESET_REQUESTED` log event with the token so contributors can wire any transport (SMTP, SendGrid, etc.) without changing the service layer.
+# Web Password Reset Experience (AUTH-036)
+
+## Target Flow
+1. User selects `Forgot password?` from the web login page.
+2. User submits account email (request-reset endpoint).
+3. System sends single-use tokenized reset link.
+4. User opens link and submits new password.
+5. Backend validates token, password policy, and token freshness.
+6. Success returns login prompt; failure returns non-enumerating error.
+
+## Boundaries
+- Web login page only exposes flow states and guidance.
+- Token generation, verification, and invalidation remain API-owned.
+- Web should never reveal whether an email exists.
+
+## Failure States
+- Invalid/unknown email request.
+- Expired token.
+- Replayed token.
+- Weak password.
+- Network/API outage.
+
+## Route/Data Contract
+- `POST /api/v1/auth/password-reset/request` body: `{ email: string }`
+- `POST /api/v1/auth/password-reset/confirm` body: `{ token: string, password: string }`
+- Standard response shape:
+  - success: `{ ok: true }`
+  - error: `{ ok: false, code: string, message: string }`
+
+## Verification Notes
+- From `/login`, toggle password reset section and verify all flow/failure states are visible.
+- Confirm login logger emits checkpoints (`LOGIN_ATTEMPT`, `LOGIN_INVALID`, `LOGIN_OK`, `LOGIN_ERROR`).
