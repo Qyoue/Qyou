@@ -91,6 +91,9 @@ export default function LoginScreen() {
         <Text style={styles.footerText}>
           Need an account? <Link href="/register" style={styles.link}>Create one</Link>
         </Text>
+        <Text style={styles.footerText}>
+          Forgot password? <Link href="/forgot-password" style={styles.link}>Recover access</Link>
+        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -173,4 +176,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
