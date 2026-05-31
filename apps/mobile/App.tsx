@@ -1,5 +1,6 @@
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
 
 const authPreview = {
   providers: ["email-password", "stellar-wallet-link"],
@@ -8,6 +9,12 @@ const authPreview = {
 } as const;
 
 export default function App() {
+  const [step, setStep] = useState<"start" | "submit" | "success" | "error">("start");
+
+  const logSignupEvent = (event: string, meta: Record<string, string> = {}) => {
+    console.log("[mobile-signup]", event, meta);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -18,6 +25,36 @@ export default function App() {
           This Expo workspace is a clean landing zone for hackathon contributors. The first milestone is shared
           authentication across mobile, web, API, and Stellar-linked identity flows.
         </Text>
+        <Text style={styles.body}>Checkpoint: {step}</Text>
+        <View style={styles.actions}>
+          <Pressable
+            style={styles.button}
+            onPress={() => {
+              setStep("submit");
+              logSignupEvent("signup_attempted");
+            }}
+          >
+            <Text style={styles.buttonText}>Simulate Submit</Text>
+          </Pressable>
+          <Pressable
+            style={styles.button}
+            onPress={() => {
+              setStep("success");
+              logSignupEvent("signup_succeeded");
+            }}
+          >
+            <Text style={styles.buttonText}>Simulate Success</Text>
+          </Pressable>
+          <Pressable
+            style={styles.button}
+            onPress={() => {
+              setStep("error");
+              logSignupEvent("signup_failed", { reason: "network" });
+            }}
+          >
+            <Text style={styles.buttonText}>Simulate Failure</Text>
+          </Pressable>
+        </View>
         <Text style={styles.code}>{JSON.stringify(authPreview, null, 2)}</Text>
       </View>
     </SafeAreaView>
@@ -66,5 +103,18 @@ const styles = StyleSheet.create({
     fontFamily: "Courier",
     overflow: "hidden",
     padding: 16
+  },
+  actions: {
+    gap: 8
+  },
+  button: {
+    backgroundColor: "#1f1d1a",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600"
   }
 });
