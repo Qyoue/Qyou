@@ -1,5 +1,5 @@
 {
-  "name": "@qyou/api",
+  "name": "@qyou/stellar-service",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,16 +7,13 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/index.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx/esm --test src/auth/registration.test.ts src/auth/login.test.ts src/auth/session.test.ts src/auth/verification.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@qyou/types": "*",
-    "cors": "^2.8.5",
+    "@stellar/stellar-sdk": "^14.3.3",
     "express": "^5.1.0"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.3",
     "@types/node": "^24.10.1",
     "tsx": "^4.20.6"
