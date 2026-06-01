@@ -107,6 +107,69 @@ export type VerificationErrorCode =
   | "RATE_LIMITED"
   | "INTERNAL_ERROR";
 
+// --- Stellar Wallet Link (AUTH-092 / AUTH-093) ---
+
+export type WalletLinkRecord = {
+  accountId: string;
+  walletAddress: string;
+  linkedAt: string;       // ISO-8601
+  rotatedAt?: string;     // ISO-8601, set on each rotation
+  recoveryToken?: string; // opaque UUID, set when recovery is initiated
+  recoveryExpiresAt?: number; // Unix ms
+};
+
+export type WalletLinkInput = {
+  accountId: string;
+  walletAddress: string;
+};
+
+export type WalletUnlinkInput = {
+  accountId: string;
+};
+
+export type WalletRotateInput = {
+  accountId: string;
+  newWalletAddress: string;
+};
+
+export type WalletRecoveryInitInput = {
+  accountId: string;
+};
+
+export type WalletRecoveryConfirmInput = {
+  accountId: string;
+  recoveryToken: string;
+  newWalletAddress: string;
+};
+
+export type WalletLinkResult =
+  | { ok: true; accountId: string; walletAddress: string; linkedAt: string }
+  | { ok: false; code: WalletLinkErrorCode; message: string };
+
+export type WalletUnlinkResult =
+  | { ok: true }
+  | { ok: false; code: WalletLinkErrorCode; message: string };
+
+export type WalletRotateResult =
+  | { ok: true; accountId: string; walletAddress: string; rotatedAt: string }
+  | { ok: false; code: WalletLinkErrorCode; message: string };
+
+export type WalletRecoveryInitResult =
+  | { ok: true; recoveryToken: string; expiresAt: string }
+  | { ok: false; code: WalletLinkErrorCode; message: string };
+
+export type WalletRecoveryConfirmResult =
+  | { ok: true; accountId: string; walletAddress: string }
+  | { ok: false; code: WalletLinkErrorCode; message: string };
+
+export type WalletLinkErrorCode =
+  | "VALIDATION_ERROR"
+  | "ALREADY_LINKED"
+  | "NOT_LINKED"
+  | "INVALID_RECOVERY_TOKEN"
+  | "RATE_LIMITED"
+  | "INTERNAL_ERROR";
+
 // --- Password Reset (AUTH-016) ---
 
 export type PasswordResetRequestInput = {
