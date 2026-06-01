@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/index.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern='(challenge-verify|reward-account-readiness)' && node --import tsx/esm --test src/wallet-link.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "jest": {
@@ -15,12 +15,13 @@
     "testEnvironment": "node",
     "testPathIgnorePatterns": ["/node_modules/", "/dist/"],
     "extensionsToTreatAsEsm": [".ts"],
+    "testPathIgnorePatterns": ["/node_modules/", "/dist/"],
     "moduleNameMapper": {
       "^@qyou/types$": "<rootDir>/../../packages/types/src/index.ts",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "transform": {
-      "^.+\\.ts$": ["ts-jest", { "useESM": true }]
+      "^.+\\.ts$": ["ts-jest", { "useESM": true, "isolatedModules": true }]
     }
   },
   "dependencies": {

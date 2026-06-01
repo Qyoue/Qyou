@@ -14,7 +14,7 @@
     "dev:mobile": "npm run dev --workspace @qyou/mobile",
     "dev:stellar-service": "npm run dev --workspace @qyou/stellar-service",
     "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspace @qyou/types && npm run typecheck --workspace @qyou/config && npm run typecheck --workspace @qyou/api && npm run typecheck --workspace @qyou/stellar-service && npm run typecheck --workspace @qyou/web && npm run typecheck --workspace @qyou/mobile"
+    "typecheck": "npm run build --workspace @qyou/types && npm run typecheck --workspace @qyou/config && npm run typecheck --workspace @qyou/api && npm run typecheck --workspace @qyou/stellar-service && npm run typecheck --workspace @qyou/web && npm run typecheck --workspace @qyou/mobile"
   },
   "devDependencies": {
     "concurrently": "^9.0.1",

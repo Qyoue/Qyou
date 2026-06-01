@@ -3,12 +3,15 @@ import type { Request, Response } from "express";
 import { Horizon } from "@stellar/stellar-sdk";
 import type { RewardAccountReadinessResult } from "@qyou/types";
 import { link, unlink, rotate, initiateRecovery, confirmRecovery, checkRewardReadiness } from "./wallet-link.js";
+import { issueChallenge, verifyChallenge } from "./challenge-verify.js";
 import type {
   WalletLinkInput,
   WalletUnlinkInput,
   WalletRotateInput,
   WalletRecoveryInitInput,
   WalletRecoveryConfirmInput,
+  ChallengeIssueInput,
+  ChallengeVerifyInput,
 } from "@qyou/types";
 
 type ServiceStatus = {
@@ -355,6 +358,59 @@ app.get("/api/v1/stellar/wallet/readiness", (request: Request, response: Respons
   } catch {
     response.status(500).json({ error: "Internal error" });
   }
+});
+
+/**
+ * POST /api/v1/stellar/challenge/issue
+ *
+ * AUTH-082: Issue a signed challenge nonce for a Stellar wallet address.
+ * Body: { walletAddress }
+ * 200  → { ok: true, challengeId, nonce, expiresAt }
+ * 400  → { ok: false, code: "VALIDATION_ERROR", message }
+ * 429  → { ok: false, code: "RATE_LIMITED", message }
+ */
+app.post("/api/v1/stellar/challenge/issue", (request: Request, response: Response) => {
+  const input = request.body as ChallengeIssueInput;
+  const result = issueChallenge(input);
+  if (result.ok) {
+    response.status(200).json(result);
+    return;
+  }
+  const statusMap: Record<string, number> = { VALIDATION_ERROR: 400, RATE_LIMITED: 429, INTERNAL_ERROR: 500 };
+  response.status(statusMap[result.code] ?? 500).json(result);
+});
+
+/**
+ * POST /api/v1/stellar/challenge/verify
+ *
+ * AUTH-082: Verify an Ed25519 signature over a previously issued challenge nonce.
+ * Body: { challengeId, walletAddress, signature }
+ * 200  → { ok: true, walletAddress, verifiedAt }
+ * 400  → VALIDATION_ERROR | ADDRESS_MISMATCH
+ * 401  → INVALID_SIGNATURE
+ * 404  → CHALLENGE_NOT_FOUND
+ * 409  → CHALLENGE_ALREADY_USED
+ * 410  → CHALLENGE_EXPIRED
+ * 429  → RATE_LIMITED
+ */
+app.post("/api/v1/stellar/challenge/verify", (request: Request, response: Response) => {
+  const input = request.body as ChallengeVerifyInput;
+  const result = verifyChallenge(input);
+  if (result.ok) {
+    response.status(200).json(result);
+    return;
+  }
+  const statusMap: Record<string, number> = {
+    VALIDATION_ERROR: 400,
+    ADDRESS_MISMATCH: 400,
+    INVALID_SIGNATURE: 401,
+    CHALLENGE_NOT_FOUND: 404,
+    CHALLENGE_ALREADY_USED: 409,
+    CHALLENGE_EXPIRED: 410,
+    RATE_LIMITED: 429,
+    INTERNAL_ERROR: 500,
+  };
+  response.status(statusMap[result.code] ?? 500).json(result);
 });
 
 app.listen(port, () => {
