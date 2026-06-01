@@ -18,6 +18,17 @@
  * - Store bounded to STORE_MAX_SIZE; oldest entry evicted on overflow.
  * - All operations emit structured JSON log events with latency_ms.
  *
+ * AUTH-094: Instrumentation
+ * -------------------------
+ * - Unlink logs the previous wallet address for audit trail.
+ * - Rotate logs both old and new wallet addresses.
+ * - Recovery confirm logs token expiry and address change.
+ * - All error paths log a structured reason field for faster diagnosis.
+ *
+ * AUTH-097: Reward-account readiness
+ * ------------------------------------
+ * - checkRewardReadiness() evaluates whether an account can receive rewards.
+ *
  * Lifecycle events
  * ----------------
  *   WALLET_LINK_ATTEMPT / WALLET_LINK_OK / WALLET_LINK_ERROR
@@ -25,6 +36,7 @@
  *   WALLET_ROTATE_ATTEMPT / WALLET_ROTATE_OK / WALLET_ROTATE_ERROR
  *   WALLET_RECOVERY_INIT_ATTEMPT / WALLET_RECOVERY_INIT_OK / WALLET_RECOVERY_INIT_ERROR
  *   WALLET_RECOVERY_CONFIRM_ATTEMPT / WALLET_RECOVERY_CONFIRM_OK / WALLET_RECOVERY_CONFIRM_ERROR
+ *   REWARD_READINESS_CHECK / REWARD_READINESS_RESULT
  */
 
 import { randomUUID } from "node:crypto";
@@ -41,6 +53,7 @@ import type {
   WalletRotateResult,
   WalletUnlinkInput,
   WalletUnlinkResult,
+  RewardReadinessResult,
 } from "@qyou/types";
 
 // ---------------------------------------------------------------------------
@@ -191,7 +204,7 @@ export function link(input: WalletLinkInput): WalletLinkResult {
 }
 
 // ---------------------------------------------------------------------------
-// unlink (AUTH-092)
+// unlink (AUTH-092 / AUTH-094)
 // ---------------------------------------------------------------------------
 
 export function unlink(input: WalletUnlinkInput): WalletUnlinkResult {
@@ -211,12 +224,30 @@ export function unlink(input: WalletUnlinkInput): WalletUnlinkResult {
   }
 
   try {
+    // AUTH-094: capture previous address for audit trail before deletion
+    const existing = walletStore.get(accountId)!;
+    const previousWalletAddress = existing.walletAddress;
+    const linkedAt = existing.linkedAt;
+
     walletStore.delete(accountId);
+
     // Clean up any pending recovery tokens for this account
+    let recoveryTokensCleaned = 0;
     for (const [token, entry] of recoveryStore) {
-      if (entry.accountId === accountId) recoveryStore.delete(token);
+      if (entry.accountId === accountId) {
+        recoveryStore.delete(token);
+        recoveryTokensCleaned++;
+      }
     }
-    log("info", "WALLET_UNLINK_OK", { accountId, latency_ms: Date.now() - start });
+
+    // AUTH-094: structured audit log with previous address and cleanup details
+    log("info", "WALLET_UNLINK_OK", {
+      accountId,
+      previousWalletAddress,
+      linkedAt,
+      recoveryTokensCleaned,
+      latency_ms: Date.now() - start,
+    });
     return { ok: true };
   } catch (err) {
     log("error", "WALLET_UNLINK_ERROR", { accountId, error: err instanceof Error ? err.message : String(err), latency_ms: Date.now() - start });
@@ -225,7 +256,7 @@ export function unlink(input: WalletUnlinkInput): WalletUnlinkResult {
 }
 
 // ---------------------------------------------------------------------------
-// rotate (AUTH-092 / AUTH-093)
+// rotate (AUTH-092 / AUTH-093 / AUTH-094)
 // ---------------------------------------------------------------------------
 
 export function rotate(input: WalletRotateInput): WalletRotateResult {
@@ -264,6 +295,8 @@ export function rotate(input: WalletRotateInput): WalletRotateResult {
   rotateInFlight.add(accountId);
   try {
     const existing = walletStore.get(accountId)!;
+    // AUTH-094: capture previous address for audit trail
+    const previousWalletAddress = existing.walletAddress;
     const newWalletAddress = input.newWalletAddress.trim();
     const rotatedAt = new Date().toISOString();
     const updated: WalletLinkRecord = {
@@ -272,7 +305,14 @@ export function rotate(input: WalletRotateInput): WalletRotateResult {
       rotatedAt,
     };
     walletStore.set(accountId, updated);
-    log("info", "WALLET_ROTATE_OK", { accountId, newWalletAddress, latency_ms: Date.now() - start });
+    // AUTH-094: log both old and new addresses for audit trail
+    log("info", "WALLET_ROTATE_OK", {
+      accountId,
+      previousWalletAddress,
+      newWalletAddress,
+      rotatedAt,
+      latency_ms: Date.now() - start,
+    });
     return { ok: true, accountId, walletAddress: newWalletAddress, rotatedAt };
   } catch (err) {
     log("error", "WALLET_ROTATE_ERROR", { accountId, error: err instanceof Error ? err.message : String(err), latency_ms: Date.now() - start });
@@ -283,7 +323,7 @@ export function rotate(input: WalletRotateInput): WalletRotateResult {
 }
 
 // ---------------------------------------------------------------------------
-// initiateRecovery (AUTH-092 / AUTH-093)
+// initiateRecovery (AUTH-092 / AUTH-093 / AUTH-094)
 // ---------------------------------------------------------------------------
 
 export function initiateRecovery(input: WalletRecoveryInitInput): WalletRecoveryInitResult {
@@ -304,8 +344,12 @@ export function initiateRecovery(input: WalletRecoveryInitInput): WalletRecovery
 
   try {
     // Invalidate any existing recovery token for this account
+    let previousTokensInvalidated = 0;
     for (const [token, entry] of recoveryStore) {
-      if (entry.accountId === accountId) recoveryStore.delete(token);
+      if (entry.accountId === accountId) {
+        recoveryStore.delete(token);
+        previousTokensInvalidated++;
+      }
     }
 
     const recoveryToken = randomUUID();
@@ -320,7 +364,14 @@ export function initiateRecovery(input: WalletRecoveryInitInput): WalletRecovery
     }
 
     const expiresAtIso = new Date(expiresAt).toISOString();
-    log("info", "WALLET_RECOVERY_INIT_OK", { accountId, latency_ms: Date.now() - start });
+    // AUTH-094: log token expiry and whether previous tokens were invalidated
+    log("info", "WALLET_RECOVERY_INIT_OK", {
+      accountId,
+      expiresAt: expiresAtIso,
+      previousTokensInvalidated,
+      hasExistingWallet: !!record,
+      latency_ms: Date.now() - start,
+    });
     return { ok: true, recoveryToken, expiresAt: expiresAtIso };
   } catch (err) {
     log("error", "WALLET_RECOVERY_INIT_ERROR", { accountId, error: err instanceof Error ? err.message : String(err), latency_ms: Date.now() - start });
@@ -329,7 +380,7 @@ export function initiateRecovery(input: WalletRecoveryInitInput): WalletRecovery
 }
 
 // ---------------------------------------------------------------------------
-// confirmRecovery (AUTH-092 / AUTH-093)
+// confirmRecovery (AUTH-092 / AUTH-093 / AUTH-094)
 // ---------------------------------------------------------------------------
 
 export function confirmRecovery(input: WalletRecoveryConfirmInput): WalletRecoveryConfirmResult {
@@ -355,21 +406,36 @@ export function confirmRecovery(input: WalletRecoveryConfirmInput): WalletRecove
   }
 
   try {
-    const entry = recoveryStore.get(input.recoveryToken.trim());
+    const tokenKey = input.recoveryToken.trim();
+    const entry = recoveryStore.get(tokenKey);
 
     // AUTH-093: single-use + expiry check + account binding
     if (!entry || Date.now() > entry.expiresAt || entry.accountId !== accountId) {
-      if (entry && entry.accountId === accountId) recoveryStore.delete(input.recoveryToken.trim());
-      log("warn", "WALLET_RECOVERY_CONFIRM_ERROR", { accountId, reason: "invalid_token", latency_ms: Date.now() - start });
+      // AUTH-094: log specific failure reason for diagnosis
+      const tokenFailReason = !entry
+        ? "token_not_found"
+        : entry.accountId !== accountId
+          ? "token_account_mismatch"
+          : "token_expired";
+      if (entry && entry.accountId === accountId) recoveryStore.delete(tokenKey);
+      log("warn", "WALLET_RECOVERY_CONFIRM_ERROR", {
+        accountId,
+        reason: "invalid_token",
+        tokenFailReason,
+        tokenExpired: entry ? Date.now() > entry.expiresAt : null,
+        latency_ms: Date.now() - start,
+      });
       return fail("INVALID_RECOVERY_TOKEN", "Recovery token is invalid, expired, or does not match this account.");
     }
 
     // Consume the token (single-use)
-    recoveryStore.delete(input.recoveryToken.trim());
+    recoveryStore.delete(tokenKey);
 
     const newWalletAddress = input.newWalletAddress.trim();
     const now = new Date().toISOString();
     const existing = walletStore.get(accountId);
+    // AUTH-094: capture previous address for audit trail
+    const previousWalletAddress = existing?.walletAddress ?? null;
     const record: WalletLinkRecord = {
       accountId,
       walletAddress: newWalletAddress,
@@ -379,12 +445,59 @@ export function confirmRecovery(input: WalletRecoveryConfirmInput): WalletRecove
     evictIfFull(walletStore);
     walletStore.set(accountId, record);
 
-    log("info", "WALLET_RECOVERY_CONFIRM_OK", { accountId, newWalletAddress, latency_ms: Date.now() - start });
+    // AUTH-094: log address change and whether this was a recovery over an existing link
+    log("info", "WALLET_RECOVERY_CONFIRM_OK", {
+      accountId,
+      previousWalletAddress,
+      newWalletAddress,
+      recoveredOverExistingLink: !!existing,
+      latency_ms: Date.now() - start,
+    });
     return { ok: true, accountId, walletAddress: newWalletAddress };
   } catch (err) {
     log("error", "WALLET_RECOVERY_CONFIRM_ERROR", { accountId, error: err instanceof Error ? err.message : String(err), latency_ms: Date.now() - start });
     return fail("INTERNAL_ERROR", "Recovery confirmation failed due to an internal error.");
   }
+}
+
+// ---------------------------------------------------------------------------
+// checkRewardReadiness (AUTH-097)
+// ---------------------------------------------------------------------------
+
+/**
+ * Evaluate whether an account is ready to receive Stellar-backed rewards.
+ *
+ * Criteria (all must pass):
+ *  1. A wallet address is linked.
+ *  2. The linked address passes Stellar format validation.
+ *  3. No active (unexpired) recovery is in progress.
+ *
+ * This is a pure read — it does not mutate state or make network calls.
+ */
+export function checkRewardReadiness(accountId: string): RewardReadinessResult {
+  const trimmed = accountId?.trim();
+  log("info", "REWARD_READINESS_CHECK", { accountId: trimmed });
+
+  const record = walletStore.get(trimmed);
+
+  if (!record) {
+    log("info", "REWARD_READINESS_RESULT", { accountId: trimmed, ready: false, reason: "NO_WALLET_LINKED" });
+    return { ready: false, accountId: trimmed, reason: "NO_WALLET_LINKED" };
+  }
+
+  if (!isValidStellarAddress(record.walletAddress)) {
+    log("warn", "REWARD_READINESS_RESULT", { accountId: trimmed, ready: false, reason: "INVALID_ADDRESS" });
+    return { ready: false, accountId: trimmed, reason: "INVALID_ADDRESS" };
+  }
+
+  // Check for an active (unexpired) recovery token
+  if (record.recoveryToken && record.recoveryExpiresAt && Date.now() < record.recoveryExpiresAt) {
+    log("info", "REWARD_READINESS_RESULT", { accountId: trimmed, ready: false, reason: "RECOVERY_IN_PROGRESS" });
+    return { ready: false, accountId: trimmed, reason: "RECOVERY_IN_PROGRESS" };
+  }
+
+  log("info", "REWARD_READINESS_RESULT", { accountId: trimmed, ready: true, walletAddress: record.walletAddress });
+  return { ready: true, accountId: trimmed, walletAddress: record.walletAddress };
 }
 
 // ---------------------------------------------------------------------------

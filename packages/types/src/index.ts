@@ -170,6 +170,17 @@ export type WalletLinkErrorCode =
   | "RATE_LIMITED"
   | "INTERNAL_ERROR";
 
+// --- Reward-Account Readiness (AUTH-097) ---
+
+export type RewardReadinessResult =
+  | { ready: true;  accountId: string; walletAddress: string }
+  | { ready: false; accountId: string; reason: RewardReadinessReason };
+
+export type RewardReadinessReason =
+  | "NO_WALLET_LINKED"
+  | "INVALID_ADDRESS"
+  | "RECOVERY_IN_PROGRESS";
+
 // --- Password Reset (AUTH-016) ---
 
 export type PasswordResetRequestInput = {
