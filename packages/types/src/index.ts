@@ -224,3 +224,47 @@ export type PasswordResetErrorCode =
   | "INVALID_RESET_TOKEN"
   | "RATE_LIMITED"
   | "INTERNAL_ERROR";
+
+// --- Signed Challenge Verification (AUTH-081 / AUTH-082) ---
+
+/**
+ * A challenge is a short-lived nonce issued by the server.
+ * The client signs it with their Stellar private key and returns the signature.
+ */
+export type ChallengeRecord = {
+  challengeId: string;
+  nonce: string;
+  walletAddress: string;
+  issuedAt: string;   // ISO-8601
+  expiresAt: number;  // Unix ms
+  used: boolean;
+};
+
+export type ChallengeIssueInput = {
+  walletAddress: string;
+};
+
+export type ChallengeIssueResult =
+  | { ok: true; challengeId: string; nonce: string; expiresAt: string }
+  | { ok: false; code: ChallengeErrorCode; message: string };
+
+export type ChallengeVerifyInput = {
+  challengeId: string;
+  walletAddress: string;
+  /** Base64-encoded Ed25519 signature of the nonce bytes. */
+  signature: string;
+};
+
+export type ChallengeVerifyResult =
+  | { ok: true; walletAddress: string; verifiedAt: string }
+  | { ok: false; code: ChallengeErrorCode; message: string };
+
+export type ChallengeErrorCode =
+  | "VALIDATION_ERROR"
+  | "CHALLENGE_NOT_FOUND"
+  | "CHALLENGE_EXPIRED"
+  | "CHALLENGE_ALREADY_USED"
+  | "ADDRESS_MISMATCH"
+  | "INVALID_SIGNATURE"
+  | "RATE_LIMITED"
+  | "INTERNAL_ERROR";
