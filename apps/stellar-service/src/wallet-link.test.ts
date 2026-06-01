@@ -2,11 +2,9 @@
  * AUTH-092 / AUTH-093 / AUTH-094 / AUTH-095 / AUTH-097 — Wallet link tests.
  *
  * Run with:
- *   node --import tsx/esm --test src/wallet-link.test.ts
+ *   npm test --workspace @qyou/stellar-service
  */
 
-import { describe, it, beforeEach } from "node:test";
-import assert from "node:assert/strict";
 import {
   link,
   unlink,
@@ -42,18 +40,18 @@ beforeEach(resetAll);
 describe("link — happy path", () => {
   it("links a wallet and returns ok:true with accountId, walletAddress, linkedAt", () => {
     const result = link({ accountId: "acct-1", walletAddress: VALID_ADDRESS });
-    assert.equal(result.ok, true);
+    expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("unreachable");
-    assert.equal(result.accountId, "acct-1");
-    assert.equal(result.walletAddress, VALID_ADDRESS);
-    assert.ok(result.linkedAt, "linkedAt is set");
-    assert.ok(new Date(result.linkedAt) <= new Date(), "linkedAt is not in the future");
+    expect(result.accountId).toBe("acct-1");
+    expect(result.walletAddress).toBe(VALID_ADDRESS);
+    expect(result.linkedAt).toBeTruthy(); // linkedAt is set
+    expect(new Date(result.linkedAt) <= new Date()).toBeTruthy(); // linkedAt is not in the future
   });
 
   it("persists the record in walletStore", () => {
     link({ accountId: "acct-2", walletAddress: VALID_ADDRESS });
-    assert.ok(walletStore.has("acct-2"));
-    assert.equal(walletStore.get("acct-2")?.walletAddress, VALID_ADDRESS);
+    expect(walletStore.has("acct-2")).toBeTruthy();
+    expect(walletStore.get("acct-2")?.walletAddress).toBe(VALID_ADDRESS);
   });
 });
 
@@ -64,38 +62,38 @@ describe("link — happy path", () => {
 describe("link — validation", () => {
   it("returns VALIDATION_ERROR for missing accountId", () => {
     const result = link({ accountId: "", walletAddress: VALID_ADDRESS });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns VALIDATION_ERROR for missing walletAddress", () => {
     const result = link({ accountId: "acct-3", walletAddress: "" });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns VALIDATION_ERROR for invalid Stellar address (too short)", () => {
     const result = link({ accountId: "acct-4", walletAddress: "GABC" });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns VALIDATION_ERROR for address not starting with G", () => {
     const result = link({ accountId: "acct-5", walletAddress: "S" + "A".repeat(55) });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns ALREADY_LINKED when a wallet is already linked", () => {
     link({ accountId: "acct-6", walletAddress: VALID_ADDRESS });
     const result = link({ accountId: "acct-6", walletAddress: VALID_ADDRESS_2 });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "ALREADY_LINKED");
+    expect(result.code).toBe("ALREADY_LINKED");
   });
 });
 
@@ -109,9 +107,9 @@ describe("link — rate-limit (AUTH-093)", () => {
       link({ accountId: "acct-rl", walletAddress: VALID_ADDRESS });
     }
     const result = link({ accountId: "acct-rl", walletAddress: VALID_ADDRESS });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "RATE_LIMITED");
+    expect(result.code).toBe("RATE_LIMITED");
   });
 
   it("rate-limit is per-accountId — different accounts are independent", () => {
@@ -120,7 +118,7 @@ describe("link — rate-limit (AUTH-093)", () => {
     }
     const result = link({ accountId: "acct-other", walletAddress: VALID_ADDRESS });
     if (!result.ok) {
-      assert.notEqual(result.code, "RATE_LIMITED");
+      expect(result.code).not.toBe("RATE_LIMITED");
     }
   });
 });
@@ -133,18 +131,18 @@ describe("unlink — happy path", () => {
   it("unlinks a wallet and returns ok:true", () => {
     link({ accountId: "acct-7", walletAddress: VALID_ADDRESS });
     const result = unlink({ accountId: "acct-7" });
-    assert.equal(result.ok, true);
-    assert.equal(walletStore.has("acct-7"), false);
+    expect(result.ok).toBe(true);
+    expect(walletStore.has("acct-7")).toBe(false);
   });
 
   it("cleans up pending recovery tokens on unlink", () => {
     link({ accountId: "acct-8", walletAddress: VALID_ADDRESS });
     const initResult = initiateRecovery({ accountId: "acct-8" });
-    assert.equal(initResult.ok, true);
+    expect(initResult.ok).toBe(true);
     if (!initResult.ok) throw new Error("unreachable");
     const token = initResult.recoveryToken;
     unlink({ accountId: "acct-8" });
-    assert.equal(recoveryStore.has(token), false, "recovery token cleaned up on unlink");
+    expect(recoveryStore.has(token)).toBe(false); // recovery token cleaned up on unlink
   });
 });
 
@@ -155,16 +153,16 @@ describe("unlink — happy path", () => {
 describe("unlink — validation", () => {
   it("returns VALIDATION_ERROR for missing accountId", () => {
     const result = unlink({ accountId: "" });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns NOT_LINKED when no wallet is linked", () => {
     const result = unlink({ accountId: "acct-9" });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "NOT_LINKED");
+    expect(result.code).toBe("NOT_LINKED");
   });
 });
 
@@ -176,23 +174,23 @@ describe("rotate — happy path", () => {
   it("rotates to a new wallet address and returns ok:true", () => {
     link({ accountId: "acct-10", walletAddress: VALID_ADDRESS });
     const result = rotate({ accountId: "acct-10", newWalletAddress: VALID_ADDRESS_2 });
-    assert.equal(result.ok, true);
+    expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("unreachable");
-    assert.equal(result.walletAddress, VALID_ADDRESS_2);
-    assert.ok(result.rotatedAt, "rotatedAt is set");
+    expect(result.walletAddress).toBe(VALID_ADDRESS_2);
+    expect(result.rotatedAt).toBeTruthy(); // rotatedAt is set
   });
 
   it("updates the walletStore with the new address", () => {
     link({ accountId: "acct-11", walletAddress: VALID_ADDRESS });
     rotate({ accountId: "acct-11", newWalletAddress: VALID_ADDRESS_2 });
-    assert.equal(walletStore.get("acct-11")?.walletAddress, VALID_ADDRESS_2);
+    expect(walletStore.get("acct-11")?.walletAddress).toBe(VALID_ADDRESS_2);
   });
 
   it("preserves the original linkedAt timestamp after rotation", () => {
     link({ accountId: "acct-12", walletAddress: VALID_ADDRESS });
     const originalLinkedAt = walletStore.get("acct-12")!.linkedAt;
     rotate({ accountId: "acct-12", newWalletAddress: VALID_ADDRESS_2 });
-    assert.equal(walletStore.get("acct-12")?.linkedAt, originalLinkedAt);
+    expect(walletStore.get("acct-12")?.linkedAt).toBe(originalLinkedAt);
   });
 });
 
@@ -203,24 +201,24 @@ describe("rotate — happy path", () => {
 describe("rotate — validation", () => {
   it("returns VALIDATION_ERROR for missing accountId", () => {
     const result = rotate({ accountId: "", newWalletAddress: VALID_ADDRESS_2 });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns VALIDATION_ERROR for invalid new wallet address", () => {
     link({ accountId: "acct-13", walletAddress: VALID_ADDRESS });
     const result = rotate({ accountId: "acct-13", newWalletAddress: "INVALID" });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns NOT_LINKED when no wallet is linked", () => {
     const result = rotate({ accountId: "acct-14", newWalletAddress: VALID_ADDRESS_2 });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "NOT_LINKED");
+    expect(result.code).toBe("NOT_LINKED");
   });
 });
 
@@ -233,21 +231,21 @@ describe("rotate — concurrent-rotation lock (AUTH-093)", () => {
     link({ accountId: "acct-15", walletAddress: VALID_ADDRESS });
     rotateInFlight.add("acct-15");
     const result = rotate({ accountId: "acct-15", newWalletAddress: VALID_ADDRESS_2 });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "INTERNAL_ERROR");
+    expect(result.code).toBe("INTERNAL_ERROR");
     rotateInFlight.delete("acct-15");
   });
 
   it("lock is released after a successful rotation", () => {
     link({ accountId: "acct-16", walletAddress: VALID_ADDRESS });
     rotate({ accountId: "acct-16", newWalletAddress: VALID_ADDRESS_2 });
-    assert.equal(rotateInFlight.has("acct-16"), false, "lock released after success");
+    expect(rotateInFlight.has("acct-16")).toBe(false); // lock released after success
   });
 
   it("lock is released after a failed rotation (not linked)", () => {
     rotate({ accountId: "acct-17", newWalletAddress: VALID_ADDRESS_2 });
-    assert.equal(rotateInFlight.has("acct-17"), false, "lock released after failure");
+    expect(rotateInFlight.has("acct-17")).toBe(false); // lock released after failure
   });
 });
 
@@ -258,31 +256,31 @@ describe("rotate — concurrent-rotation lock (AUTH-093)", () => {
 describe("initiateRecovery — happy path", () => {
   it("returns ok:true with a recoveryToken and expiresAt", () => {
     const result = initiateRecovery({ accountId: "acct-18" });
-    assert.equal(result.ok, true);
+    expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("unreachable");
-    assert.ok(result.recoveryToken.length > 0, "recoveryToken is set");
-    assert.ok(new Date(result.expiresAt) > new Date(), "expiresAt is in the future");
+    expect(result.recoveryToken.length > 0).toBeTruthy(); // recoveryToken is set
+    expect(new Date(result.expiresAt) > new Date()).toBeTruthy(); // expiresAt is in the future
   });
 
   it("stores the recovery token in recoveryStore", () => {
     const result = initiateRecovery({ accountId: "acct-19" });
-    assert.equal(result.ok, true);
+    expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("unreachable");
-    assert.ok(recoveryStore.has(result.recoveryToken));
+    expect(recoveryStore.has(result.recoveryToken)).toBeTruthy();
   });
 
   it("invalidates any previous recovery token when a new one is issued", () => {
     const first = initiateRecovery({ accountId: "acct-20" });
-    assert.equal(first.ok, true);
+    expect(first.ok).toBe(true);
     if (!first.ok) throw new Error("unreachable");
     const firstToken = first.recoveryToken;
 
     const second = initiateRecovery({ accountId: "acct-20" });
-    assert.equal(second.ok, true);
+    expect(second.ok).toBe(true);
     if (!second.ok) throw new Error("unreachable");
 
-    assert.equal(recoveryStore.has(firstToken), false, "old token invalidated");
-    assert.ok(recoveryStore.has(second.recoveryToken), "new token stored");
+    expect(recoveryStore.has(firstToken)).toBe(false); // old token invalidated
+    expect(recoveryStore.has(second.recoveryToken)).toBeTruthy(); // new token stored
   });
 });
 
@@ -293,9 +291,9 @@ describe("initiateRecovery — happy path", () => {
 describe("initiateRecovery — validation", () => {
   it("returns VALIDATION_ERROR for missing accountId", () => {
     const result = initiateRecovery({ accountId: "" });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 });
 
@@ -306,7 +304,7 @@ describe("initiateRecovery — validation", () => {
 describe("confirmRecovery — happy path", () => {
   it("confirms recovery and sets the new wallet address", () => {
     const init = initiateRecovery({ accountId: "acct-21" });
-    assert.equal(init.ok, true);
+    expect(init.ok).toBe(true);
     if (!init.ok) throw new Error("unreachable");
 
     const result = confirmRecovery({
@@ -314,15 +312,15 @@ describe("confirmRecovery — happy path", () => {
       recoveryToken: init.recoveryToken,
       newWalletAddress: VALID_ADDRESS,
     });
-    assert.equal(result.ok, true);
+    expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("unreachable");
-    assert.equal(result.walletAddress, VALID_ADDRESS);
-    assert.equal(walletStore.get("acct-21")?.walletAddress, VALID_ADDRESS);
+    expect(result.walletAddress).toBe(VALID_ADDRESS);
+    expect(walletStore.get("acct-21")?.walletAddress).toBe(VALID_ADDRESS);
   });
 
   it("recovery token is consumed (single-use)", () => {
     const init = initiateRecovery({ accountId: "acct-22" });
-    assert.equal(init.ok, true);
+    expect(init.ok).toBe(true);
     if (!init.ok) throw new Error("unreachable");
 
     confirmRecovery({
@@ -336,9 +334,9 @@ describe("confirmRecovery — happy path", () => {
       recoveryToken: init.recoveryToken,
       newWalletAddress: VALID_ADDRESS_2,
     });
-    assert.equal(second.ok, false);
+    expect(second.ok).toBe(false);
     if (second.ok) throw new Error("unreachable");
-    assert.equal(second.code, "INVALID_RECOVERY_TOKEN");
+    expect(second.code).toBe("INVALID_RECOVERY_TOKEN");
   });
 
   it("preserves original linkedAt when recovering over an existing link", () => {
@@ -346,7 +344,7 @@ describe("confirmRecovery — happy path", () => {
     const originalLinkedAt = walletStore.get("acct-23")!.linkedAt;
 
     const init = initiateRecovery({ accountId: "acct-23" });
-    assert.equal(init.ok, true);
+    expect(init.ok).toBe(true);
     if (!init.ok) throw new Error("unreachable");
 
     confirmRecovery({
@@ -355,7 +353,7 @@ describe("confirmRecovery — happy path", () => {
       newWalletAddress: VALID_ADDRESS_2,
     });
 
-    assert.equal(walletStore.get("acct-23")?.linkedAt, originalLinkedAt);
+    expect(walletStore.get("acct-23")?.linkedAt).toBe(originalLinkedAt);
   });
 });
 
@@ -366,30 +364,30 @@ describe("confirmRecovery — happy path", () => {
 describe("confirmRecovery — validation and security (AUTH-093)", () => {
   it("returns VALIDATION_ERROR for missing accountId", () => {
     const result = confirmRecovery({ accountId: "", recoveryToken: "tok", newWalletAddress: VALID_ADDRESS });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns VALIDATION_ERROR for missing recoveryToken", () => {
     const result = confirmRecovery({ accountId: "acct-24", recoveryToken: "", newWalletAddress: VALID_ADDRESS });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns VALIDATION_ERROR for invalid new wallet address", () => {
     const init = initiateRecovery({ accountId: "acct-25" });
-    assert.equal(init.ok, true);
+    expect(init.ok).toBe(true);
     if (!init.ok) throw new Error("unreachable");
     const result = confirmRecovery({
       accountId: "acct-25",
       recoveryToken: init.recoveryToken,
       newWalletAddress: "INVALID",
     });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "VALIDATION_ERROR");
+    expect(result.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns INVALID_RECOVERY_TOKEN for unknown token", () => {
@@ -398,14 +396,14 @@ describe("confirmRecovery — validation and security (AUTH-093)", () => {
       recoveryToken: "00000000-0000-0000-0000-000000000000",
       newWalletAddress: VALID_ADDRESS,
     });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "INVALID_RECOVERY_TOKEN");
+    expect(result.code).toBe("INVALID_RECOVERY_TOKEN");
   });
 
   it("returns INVALID_RECOVERY_TOKEN when token belongs to a different account (AUTH-093)", () => {
     const init = initiateRecovery({ accountId: "acct-27" });
-    assert.equal(init.ok, true);
+    expect(init.ok).toBe(true);
     if (!init.ok) throw new Error("unreachable");
 
     const result = confirmRecovery({
@@ -413,10 +411,10 @@ describe("confirmRecovery — validation and security (AUTH-093)", () => {
       recoveryToken: init.recoveryToken,
       newWalletAddress: VALID_ADDRESS,
     });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "INVALID_RECOVERY_TOKEN");
-    assert.ok(recoveryStore.has(init.recoveryToken), "token not consumed on wrong-account attempt");
+    expect(result.code).toBe("INVALID_RECOVERY_TOKEN");
+    expect(recoveryStore.has(init.recoveryToken)).toBeTruthy(); // token not consumed on wrong-account attempt
   });
 
   it("returns INVALID_RECOVERY_TOKEN for an expired token (AUTH-093)", () => {
@@ -429,9 +427,9 @@ describe("confirmRecovery — validation and security (AUTH-093)", () => {
       recoveryToken: token,
       newWalletAddress: VALID_ADDRESS,
     });
-    assert.equal(result.ok, false);
+    expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
-    assert.equal(result.code, "INVALID_RECOVERY_TOKEN");
+    expect(result.code).toBe("INVALID_RECOVERY_TOKEN");
   });
 });
 
@@ -448,10 +446,10 @@ describe("store-size cap (AUTH-093)", () => {
         linkedAt: new Date().toISOString(),
       });
     }
-    assert.equal(walletStore.size, STORE_MAX_SIZE);
+    expect(walletStore.size).toBe(STORE_MAX_SIZE);
 
     link({ accountId: "acct-cap-new", walletAddress: VALID_ADDRESS });
-    assert.ok(walletStore.size <= STORE_MAX_SIZE, `store size ${walletStore.size} exceeds cap`);
+    expect(walletStore.size <= STORE_MAX_SIZE).toBeTruthy(); // store size exceeds cap
   });
 });
 
@@ -461,7 +459,7 @@ describe("store-size cap (AUTH-093)", () => {
 
 describe("RECOVERY_TTL_MS", () => {
   it("is 15 minutes", () => {
-    assert.equal(RECOVERY_TTL_MS, 15 * 60 * 1000);
+    expect(RECOVERY_TTL_MS).toBe(15 * 60 * 1000);
   });
 });
 
@@ -473,23 +471,23 @@ describe("unlink — audit trail (AUTH-094)", () => {
   it("wallet is removed from store after unlink", () => {
     link({ accountId: "audit-unlink-1", walletAddress: VALID_ADDRESS });
     unlink({ accountId: "audit-unlink-1" });
-    assert.equal(walletStore.has("audit-unlink-1"), false);
+    expect(walletStore.has("audit-unlink-1")).toBe(false);
   });
 
   it("all recovery tokens for the account are cleaned up on unlink", () => {
     link({ accountId: "audit-unlink-2", walletAddress: VALID_ADDRESS });
     const r1 = initiateRecovery({ accountId: "audit-unlink-2" });
-    assert.equal(r1.ok, true);
+    expect(r1.ok).toBe(true);
     if (!r1.ok) throw new Error("unreachable");
     // Issue a second token (invalidates first, but let's verify cleanup)
     const r2 = initiateRecovery({ accountId: "audit-unlink-2" });
-    assert.equal(r2.ok, true);
+    expect(r2.ok).toBe(true);
     if (!r2.ok) throw new Error("unreachable");
 
     unlink({ accountId: "audit-unlink-2" });
 
-    assert.equal(recoveryStore.has(r1.recoveryToken), false, "first token cleaned up");
-    assert.equal(recoveryStore.has(r2.recoveryToken), false, "second token cleaned up");
+    expect(recoveryStore.has(r1.recoveryToken)).toBe(false); // first token cleaned up
+    expect(recoveryStore.has(r2.recoveryToken)).toBe(false); // second token cleaned up
   });
 });
 
@@ -501,15 +499,15 @@ describe("rotate — audit trail (AUTH-094)", () => {
   it("store reflects new address after rotation", () => {
     link({ accountId: "audit-rotate-1", walletAddress: VALID_ADDRESS });
     rotate({ accountId: "audit-rotate-1", newWalletAddress: VALID_ADDRESS_2 });
-    assert.equal(walletStore.get("audit-rotate-1")?.walletAddress, VALID_ADDRESS_2);
+    expect(walletStore.get("audit-rotate-1")?.walletAddress).toBe(VALID_ADDRESS_2);
   });
 
   it("rotatedAt is set on the record after rotation", () => {
     link({ accountId: "audit-rotate-2", walletAddress: VALID_ADDRESS });
     rotate({ accountId: "audit-rotate-2", newWalletAddress: VALID_ADDRESS_2 });
     const record = walletStore.get("audit-rotate-2");
-    assert.ok(record?.rotatedAt, "rotatedAt is set on the record");
-    assert.ok(new Date(record!.rotatedAt!) <= new Date(), "rotatedAt is not in the future");
+    expect(record?.rotatedAt).toBeTruthy(); // rotatedAt is set on the record
+    expect(new Date(record!.rotatedAt!) <= new Date()).toBeTruthy(); // rotatedAt is not in the future
   });
 
   it("linkedAt is preserved across multiple rotations", () => {
@@ -517,7 +515,7 @@ describe("rotate — audit trail (AUTH-094)", () => {
     const originalLinkedAt = walletStore.get("audit-rotate-3")!.linkedAt;
     rotate({ accountId: "audit-rotate-3", newWalletAddress: VALID_ADDRESS_2 });
     rotate({ accountId: "audit-rotate-3", newWalletAddress: VALID_ADDRESS });
-    assert.equal(walletStore.get("audit-rotate-3")?.linkedAt, originalLinkedAt);
+    expect(walletStore.get("audit-rotate-3")?.linkedAt).toBe(originalLinkedAt);
   });
 });
 
@@ -528,7 +526,7 @@ describe("rotate — audit trail (AUTH-094)", () => {
 describe("confirmRecovery — audit trail (AUTH-094)", () => {
   it("token is removed from recoveryStore after successful confirm", () => {
     const init = initiateRecovery({ accountId: "audit-confirm-1" });
-    assert.equal(init.ok, true);
+    expect(init.ok).toBe(true);
     if (!init.ok) throw new Error("unreachable");
 
     confirmRecovery({
@@ -537,13 +535,13 @@ describe("confirmRecovery — audit trail (AUTH-094)", () => {
       newWalletAddress: VALID_ADDRESS,
     });
 
-    assert.equal(recoveryStore.has(init.recoveryToken), false, "token consumed after confirm");
+    expect(recoveryStore.has(init.recoveryToken)).toBe(false); // token consumed after confirm
   });
 
   it("rotatedAt is set on the record after recovery confirm", () => {
     link({ accountId: "audit-confirm-2", walletAddress: VALID_ADDRESS });
     const init = initiateRecovery({ accountId: "audit-confirm-2" });
-    assert.equal(init.ok, true);
+    expect(init.ok).toBe(true);
     if (!init.ok) throw new Error("unreachable");
 
     confirmRecovery({
@@ -553,12 +551,12 @@ describe("confirmRecovery — audit trail (AUTH-094)", () => {
     });
 
     const record = walletStore.get("audit-confirm-2");
-    assert.ok(record?.rotatedAt, "rotatedAt set after recovery confirm");
+    expect(record?.rotatedAt).toBeTruthy(); // rotatedAt set after recovery confirm
   });
 
   it("token is NOT consumed when account mismatch occurs (AUTH-094 security)", () => {
     const init = initiateRecovery({ accountId: "audit-confirm-3" });
-    assert.equal(init.ok, true);
+    expect(init.ok).toBe(true);
     if (!init.ok) throw new Error("unreachable");
 
     confirmRecovery({
@@ -568,7 +566,7 @@ describe("confirmRecovery — audit trail (AUTH-094)", () => {
     });
 
     // Token must still be valid for the correct account
-    assert.ok(recoveryStore.has(init.recoveryToken), "token preserved after wrong-account attempt");
+    expect(recoveryStore.has(init.recoveryToken)).toBeTruthy(); // token preserved after wrong-account attempt
   });
 });
 
@@ -580,19 +578,19 @@ describe("checkRewardReadiness — ready (AUTH-097)", () => {
   it("returns ready:true when a valid wallet is linked and no recovery in progress", () => {
     link({ accountId: "ready-1", walletAddress: VALID_ADDRESS });
     const result = checkRewardReadiness("ready-1");
-    assert.equal(result.ready, true);
+    expect(result.ready).toBe(true);
     if (!result.ready) throw new Error("unreachable");
-    assert.equal(result.accountId, "ready-1");
-    assert.equal(result.walletAddress, VALID_ADDRESS);
+    expect(result.accountId).toBe("ready-1");
+    expect(result.walletAddress).toBe(VALID_ADDRESS);
   });
 
   it("returns ready:true after a rotation (new address is valid)", () => {
     link({ accountId: "ready-2", walletAddress: VALID_ADDRESS });
     rotate({ accountId: "ready-2", newWalletAddress: VALID_ADDRESS_2 });
     const result = checkRewardReadiness("ready-2");
-    assert.equal(result.ready, true);
+    expect(result.ready).toBe(true);
     if (!result.ready) throw new Error("unreachable");
-    assert.equal(result.walletAddress, VALID_ADDRESS_2);
+    expect(result.walletAddress).toBe(VALID_ADDRESS_2);
   });
 
   it("returns ready:true after recovery token expires (no longer in progress)", () => {
@@ -606,7 +604,7 @@ describe("checkRewardReadiness — ready (AUTH-097)", () => {
       recoveryExpiresAt: Date.now() - 1, // already expired
     });
     const result = checkRewardReadiness("ready-3");
-    assert.equal(result.ready, true);
+    expect(result.ready).toBe(true);
   });
 });
 
@@ -617,19 +615,19 @@ describe("checkRewardReadiness — ready (AUTH-097)", () => {
 describe("checkRewardReadiness — not ready (AUTH-097)", () => {
   it("returns NO_WALLET_LINKED when no wallet is associated", () => {
     const result = checkRewardReadiness("no-wallet-acct");
-    assert.equal(result.ready, false);
+    expect(result.ready).toBe(false);
     if (result.ready) throw new Error("unreachable");
-    assert.equal(result.reason, "NO_WALLET_LINKED");
-    assert.equal(result.accountId, "no-wallet-acct");
+    expect(result.reason).toBe("NO_WALLET_LINKED");
+    expect(result.accountId).toBe("no-wallet-acct");
   });
 
   it("returns NO_WALLET_LINKED after the wallet is unlinked", () => {
     link({ accountId: "unlinked-acct", walletAddress: VALID_ADDRESS });
     unlink({ accountId: "unlinked-acct" });
     const result = checkRewardReadiness("unlinked-acct");
-    assert.equal(result.ready, false);
+    expect(result.ready).toBe(false);
     if (result.ready) throw new Error("unreachable");
-    assert.equal(result.reason, "NO_WALLET_LINKED");
+    expect(result.reason).toBe("NO_WALLET_LINKED");
   });
 
   it("returns INVALID_ADDRESS when the stored address is malformed", () => {
@@ -640,29 +638,29 @@ describe("checkRewardReadiness — not ready (AUTH-097)", () => {
       linkedAt: new Date().toISOString(),
     });
     const result = checkRewardReadiness("bad-addr-acct");
-    assert.equal(result.ready, false);
+    expect(result.ready).toBe(false);
     if (result.ready) throw new Error("unreachable");
-    assert.equal(result.reason, "INVALID_ADDRESS");
+    expect(result.reason).toBe("INVALID_ADDRESS");
   });
 
   it("returns RECOVERY_IN_PROGRESS when an active recovery token exists", () => {
     link({ accountId: "recovery-acct", walletAddress: VALID_ADDRESS });
     initiateRecovery({ accountId: "recovery-acct" });
     const result = checkRewardReadiness("recovery-acct");
-    assert.equal(result.ready, false);
+    expect(result.ready).toBe(false);
     if (result.ready) throw new Error("unreachable");
-    assert.equal(result.reason, "RECOVERY_IN_PROGRESS");
+    expect(result.reason).toBe("RECOVERY_IN_PROGRESS");
   });
 
   it("returns ready:true once recovery is confirmed (token consumed)", () => {
     link({ accountId: "post-recovery-acct", walletAddress: VALID_ADDRESS });
     const init = initiateRecovery({ accountId: "post-recovery-acct" });
-    assert.equal(init.ok, true);
+    expect(init.ok).toBe(true);
     if (!init.ok) throw new Error("unreachable");
 
     // Not ready while recovery is in progress
     const during = checkRewardReadiness("post-recovery-acct");
-    assert.equal(during.ready, false);
+    expect(during.ready).toBe(false);
 
     confirmRecovery({
       accountId: "post-recovery-acct",
@@ -672,9 +670,9 @@ describe("checkRewardReadiness — not ready (AUTH-097)", () => {
 
     // Ready again after recovery is confirmed
     const after = checkRewardReadiness("post-recovery-acct");
-    assert.equal(after.ready, true);
+    expect(after.ready).toBe(true);
     if (!after.ready) throw new Error("unreachable");
-    assert.equal(after.walletAddress, VALID_ADDRESS_2);
+    expect(after.walletAddress).toBe(VALID_ADDRESS_2);
   });
 });
 
@@ -686,18 +684,18 @@ describe("checkRewardReadiness — edge cases (AUTH-097)", () => {
   it("trims whitespace from accountId", () => {
     link({ accountId: "trim-acct", walletAddress: VALID_ADDRESS });
     const result = checkRewardReadiness("  trim-acct  ");
-    assert.equal(result.ready, true);
+    expect(result.ready).toBe(true);
     if (!result.ready) throw new Error("unreachable");
-    assert.equal(result.accountId, "trim-acct");
+    expect(result.accountId).toBe("trim-acct");
   });
 
   it("is idempotent — multiple calls return the same result", () => {
     link({ accountId: "idem-acct", walletAddress: VALID_ADDRESS });
     const r1 = checkRewardReadiness("idem-acct");
     const r2 = checkRewardReadiness("idem-acct");
-    assert.equal(r1.ready, r2.ready);
+    expect(r1.ready).toBe(r2.ready);
     if (r1.ready && r2.ready) {
-      assert.equal(r1.walletAddress, r2.walletAddress);
+      expect(r1.walletAddress).toBe(r2.walletAddress);
     }
   });
 });
