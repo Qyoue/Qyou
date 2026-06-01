@@ -1,7 +1,7 @@
 import express from "express";
 import type { Request, Response } from "express";
 import { Horizon } from "@stellar/stellar-sdk";
-import { link, unlink, rotate, initiateRecovery, confirmRecovery } from "./wallet-link.js";
+import { link, unlink, rotate, initiateRecovery, confirmRecovery, checkRewardReadiness } from "./wallet-link.js";
 import type {
   WalletLinkInput,
   WalletUnlinkInput,
@@ -200,6 +200,32 @@ app.post("/api/v1/stellar/wallet/recovery/confirm", (request: Request, response:
   };
 
   response.status(statusMap[result.code] ?? 500).json(result);
+});
+
+/**
+ * GET /api/v1/stellar/wallet/readiness?accountId={accountId}
+ *
+ * AUTH-097: Check whether an account is ready to receive Stellar-backed rewards.
+ *
+ * 200  → { ready: true,  accountId, walletAddress }
+ *      → { ready: false, accountId, reason: "NO_WALLET_LINKED" | "INVALID_ADDRESS" | "RECOVERY_IN_PROGRESS" }
+ * 400  → { error: "accountId is required" }
+ * 500  → { error: "Internal error" }
+ */
+app.get("/api/v1/stellar/wallet/readiness", (request: Request, response: Response) => {
+  const accountId = (request.query["accountId"] as string | undefined)?.trim();
+
+  if (!accountId) {
+    response.status(400).json({ error: "accountId is required" });
+    return;
+  }
+
+  try {
+    const result = checkRewardReadiness(accountId);
+    response.status(200).json(result);
+  } catch {
+    response.status(500).json({ error: "Internal error" });
+  }
 });
 
 app.listen(port, () => {
