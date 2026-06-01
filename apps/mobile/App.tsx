@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const authPreview = {
   providers: ["email-password", "stellar-wallet-link"],
@@ -8,8 +8,56 @@ const authPreview = {
   nextStep: "Build mobile sign-up, sign-in, session restore, and wallet linking."
 } as const;
 
+// ---------------------------------------------------------------------------
+// AUTH-069: Biometric session restore instrumentation
+// ---------------------------------------------------------------------------
+
+type BiometricRestoreStep =
+  | "idle"
+  | "checking"
+  | "prompting"
+  | "restoring"
+  | "restored"
+  | "skipped"
+  | "failed";
+
+function logBiometric(event: string, meta: Record<string, unknown> = {}): void {
+  console.log(JSON.stringify({ ts: new Date().toISOString(), context: "biometric-restore", event, ...meta }));
+}
+
 export default function App() {
   const [step, setStep] = useState<"start" | "submit" | "success" | "error">("start");
+  const [biometricStep, setBiometricStep] = useState<BiometricRestoreStep>("idle");
+
+  // AUTH-069: instrument the biometric session restore bootstrap sequence
+  useEffect(() => {
+    setBiometricStep("checking");
+    logBiometric("BIOMETRIC_RESTORE_CHECK", { checkpoint: "bootstrap_start" });
+
+    // Simulate checking for a stored biometric credential
+    const hasStoredCredential = false; // placeholder until SecureStore integration
+    if (!hasStoredCredential) {
+      setBiometricStep("skipped");
+      logBiometric("BIOMETRIC_RESTORE_SKIPPED", { reason: "no_stored_credential" });
+      return;
+    }
+
+    setBiometricStep("prompting");
+    logBiometric("BIOMETRIC_RESTORE_PROMPT", { checkpoint: "awaiting_user" });
+  }, []);
+
+  const simulateBiometricRestore = (outcome: "success" | "failure") => {
+    setBiometricStep("restoring");
+    logBiometric("BIOMETRIC_RESTORE_ATTEMPT", { checkpoint: "restore_start" });
+
+    if (outcome === "success") {
+      setBiometricStep("restored");
+      logBiometric("BIOMETRIC_RESTORE_OK", { checkpoint: "session_restored" });
+    } else {
+      setBiometricStep("failed");
+      logBiometric("BIOMETRIC_RESTORE_ERROR", { reason: "auth_failed", checkpoint: "restore_failed" });
+    }
+  };
 
   const logSignupEvent = (event: string, meta: Record<string, string> = {}) => {
     console.log("[mobile-signup]", event, meta);
@@ -26,6 +74,7 @@ export default function App() {
           authentication across mobile, web, API, and Stellar-linked identity flows.
         </Text>
         <Text style={styles.body}>Checkpoint: {step}</Text>
+        <Text style={styles.body}>Biometric restore: {biometricStep}</Text>
         <View style={styles.actions}>
           <Pressable
             style={styles.button}
@@ -53,6 +102,12 @@ export default function App() {
             }}
           >
             <Text style={styles.buttonText}>Simulate Failure</Text>
+          </Pressable>
+          <Pressable style={styles.button} onPress={() => simulateBiometricRestore("success")}>
+            <Text style={styles.buttonText}>Biometric Restore ✓</Text>
+          </Pressable>
+          <Pressable style={styles.button} onPress={() => simulateBiometricRestore("failure")}>
+            <Text style={styles.buttonText}>Biometric Restore ✗</Text>
           </Pressable>
         </View>
         <Text style={styles.code}>{JSON.stringify(authPreview, null, 2)}</Text>
