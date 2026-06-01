@@ -107,6 +107,25 @@ export type VerificationErrorCode =
   | "RATE_LIMITED"
   | "INTERNAL_ERROR";
 
+// --- Reward Account Readiness (AUTH-098/099/100) ---
+
+export type RewardAccountStatus =
+  | "not_linked"
+  | "pending_activation"
+  | "active"
+  | "suspended";
+
+export type RewardAccountReadinessResult =
+  | { ok: true; accountId: string; stellarAddress: string; status: RewardAccountStatus }
+  | { ok: false; code: RewardAccountErrorCode; message: string };
+
+export type RewardAccountErrorCode =
+  | "VALIDATION_ERROR"
+  | "ACCOUNT_NOT_FOUND"
+  | "STELLAR_UNREACHABLE"
+  | "ACCOUNT_NOT_FUNDED"
+  | "INTERNAL_ERROR";
+
 // --- Stellar Wallet Link (AUTH-092 / AUTH-093) ---
 
 export type WalletLinkRecord = {
