@@ -22,6 +22,7 @@
 
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import type { AccountRecord, LoginErrorCode, LoginInput, LoginResult, TokenPair } from "@qyou/types";
+import { loadAuthConfig } from "@qyou/config";
 import { getAccountByEmail } from "./store.js";
 
 // ---------------------------------------------------------------------------
@@ -63,9 +64,10 @@ export function clearLoginRateBuckets(): void {
 // JWT (no external dep) (AUTH-007)
 // ---------------------------------------------------------------------------
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-production";
-const ACCESS_TTL_MS = 15 * 60 * 1000;
-const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const authConfig = loadAuthConfig();
+const JWT_SECRET = authConfig.jwtSecret;
+const ACCESS_TTL_MS = authConfig.accessTokenTtlSeconds * 1000;
+const REFRESH_TTL_MS = authConfig.refreshTokenTtlSeconds * 1000;
 
 function signJwt(payload: Record<string, unknown>): string {
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
