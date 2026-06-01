@@ -93,6 +93,27 @@ describe("issueChallenge — validation", () => {
 });
 
 // ---------------------------------------------------------------------------
+// verifyChallenge — rate-limit
+// ---------------------------------------------------------------------------
+
+describe("verifyChallenge — rate-limit", () => {
+  it("returns RATE_LIMITED after exceeding verify attempts per address", () => {
+    const issued = issueChallenge({ walletAddress: VALID_ADDRESS });
+    if (!issued.ok) throw new Error("unreachable");
+
+    // Intentionally use bad signatures; rate-limit should still trip.
+    for (let i = 0; i < 10; i++) {
+      verifyChallenge({ challengeId: issued.challengeId, walletAddress: VALID_ADDRESS, signature: "bad" });
+    }
+
+    const limited = verifyChallenge({ challengeId: issued.challengeId, walletAddress: VALID_ADDRESS, signature: "bad" });
+    expect(limited.ok).toBe(false);
+    if (limited.ok) throw new Error("unreachable");
+    expect(limited.code).toBe("RATE_LIMITED");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // verifyChallenge — happy path
 // ---------------------------------------------------------------------------
 
@@ -195,6 +216,9 @@ describe("verifyChallenge — expiry", () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
     expect(result.code).toBe("CHALLENGE_EXPIRED");
+
+    // Expired challenges are cleaned up.
+    expect(challengeStore.has(issued.challengeId)).toBe(false);
   });
 });
 
