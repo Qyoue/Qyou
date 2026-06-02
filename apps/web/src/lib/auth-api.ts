@@ -1,16 +1,27 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
-import type {
-  LoginInput,
-  LoginResult,
-  PasswordResetConfirmInput,
-  PasswordResetConfirmResult,
-  PasswordResetRequestInput,
-  PasswordResetRequestResult,
-  RegistrationInput,
-  RegistrationResult,
-  VerificationResult,
-} from "@qyou/types";
+export type RegistrationInput = {
+  email: string;
+  password: string;
+  displayName?: string;
+};
+
+export type RegistrationResult =
+  | { ok: true; accountId: string; email: string; status: string }
+  | { ok: false; code: string; message: string };
+
+export type LoginInput = {
+  email: string;
+  password: string;
+};
+
+export type LoginResult =
+  | { ok: true; accountId: string; email: string; tokens: { accessToken: string; expiresAt: string; refreshToken: string } }
+  | { ok: false; code: string; message: string };
+
+export type ResetRequestResult = { ok: true } | { ok: false; code: string; message: string };
+export type ResetConfirmResult = { ok: true } | { ok: false; code: string; message: string };
+export type VerifyResult = { ok: true; accountId: string; email: string } | { ok: false; code: string; message: string };
 
 export async function registerAccount(input: RegistrationInput): Promise<RegistrationResult> {
   const res = await fetch(`${API_BASE}/api/v1/auth/register`, {

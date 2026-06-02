@@ -1,35 +1,51 @@
-# AUTH-109/110 — Shared Auth Types & Request Contracts
+# AUTH-106..108 — Shared Auth Types & Request Contracts
 
-This document describes how auth request/response contracts are shared across the monorepo and how to exercise the baseline to prevent drift.
+This document defines the baseline conventions for shared auth request/response contracts and how to detect drift across workspaces.
 
 Backlog-IDs:
-- AUTH-109 (exercise)
-- AUTH-110 (document)
+- AUTH-106 (define)
+- AUTH-107 (wire)
+- AUTH-108 (monitor)
 
 ## Goal
 
-Define auth DTOs once and import them everywhere so workspaces do not re-describe the same shapes repeatedly.
+Keep auth contracts (DTOs + error codes) defined once, reused everywhere, and easy to evolve without duplicating types in each app.
 
-Source of truth:
-- `packages/types/src/index.ts`
+## Ownership boundaries
 
-## Conventions
+- `packages/types` is the source of truth for:
+  - request/response DTOs (`RegistrationInput`, `LoginResult`, etc.)
+  - error code unions (`LoginErrorCode`, `VerificationErrorCode`, etc.)
+  - shared service payload shapes (`ServiceStatus`, `AuthBootstrap`, `StellarServiceInfo`)
+- Apps **must not** re-declare these DTOs locally. They should import from `@qyou/types`.
 
-- `*Input` types model endpoint request bodies.
-- `*Result` types are unions of success and failure outcomes.
-- Failure cases use a typed `code` union per domain (e.g., `LoginErrorCode`).
+## Contract naming conventions
 
-## Exercise the baseline (drift checks)
+- `*Input` is the request body shape for an endpoint.
+- `*Result` is the response union (success | failure).
+- `*ErrorCode` is a string-union used by failure cases.
 
-Run:
+Example:
+- `LoginInput` → request body for `POST /api/v1/auth/login`
+- `LoginResult` → `200` success union, or `{ ok:false, code, message }`
+
+## Wiring the contracts into workspaces
+
+If a workspace needs to call an auth endpoint, it should:
+1) add `@qyou/types` as a dependency, then
+2) import the relevant `*Input` / `*Result` types and use them in client code.
+
+## Monitoring drift
+
+Run the contracts audit:
 
 ```bash
 npm run auth:contracts
 ```
 
-This:
-- builds `@qyou/types` (ensures the contract layer typechecks)
-- scans the repo for duplicate auth contract declarations outside `packages/types`
+This does two things:
+- builds `@qyou/types` to ensure the contract layer typechecks
+- scans the repo for duplicate auth contract type declarations outside `packages/types`
 
-If it fails, delete the duplicate local contract type and import from `@qyou/types`.
+If the audit fails, remove the duplicate local type and import from `@qyou/types` instead.
 

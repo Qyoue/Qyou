@@ -67,7 +67,7 @@ async function main() {
 
     for (const marker of CONTRACT_MARKERS) {
       if (text.includes(marker)) {
-        errors.push(`${rel}: duplicates contract marker (${marker}) — import from @qyou/types instead.`);
+        errors.push(`${rel}: duplicates contract marker (${marker}) — use @qyou/types instead.`);
       }
     }
   }

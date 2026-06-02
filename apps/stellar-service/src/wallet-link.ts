@@ -291,6 +291,15 @@ export function rotate(input: WalletRotateInput): WalletRotateResult {
   rotateInFlight.add(accountId);
   try {
     const existing = walletStore.get(accountId)!;
+    // AUTH-088: rotation invalidates any outstanding recovery tokens to prevent stale-token reuse.
+    let recoveryTokensInvalidated = 0;
+    for (const [token, entry] of recoveryStore) {
+      if (entry.accountId === accountId) {
+        recoveryStore.delete(token);
+        recoveryTokensInvalidated++;
+      }
+    }
+
     // AUTH-094: capture previous address for audit trail
     const previousWalletAddress = existing.walletAddress;
     const newWalletAddress = input.newWalletAddress.trim();
@@ -299,6 +308,8 @@ export function rotate(input: WalletRotateInput): WalletRotateResult {
       ...existing,
       walletAddress: newWalletAddress,
       rotatedAt,
+      recoveryToken: undefined,
+      recoveryExpiresAt: undefined,
     };
     walletStore.set(accountId, updated);
     // AUTH-094: log both old and new addresses for audit trail
@@ -307,6 +318,7 @@ export function rotate(input: WalletRotateInput): WalletRotateResult {
       previousWalletAddress,
       newWalletAddress,
       rotatedAt,
+      recoveryTokensInvalidated,
       latency_ms: Date.now() - start,
     });
     return { ok: true, accountId, walletAddress: newWalletAddress, rotatedAt };

@@ -40,7 +40,8 @@ export const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export const STORE_MAX_SIZE = 10_000;
 
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 5;
+const RATE_MAX_ISSUE = 5;
+const RATE_MAX_VERIFY = 10;
 
 // ---------------------------------------------------------------------------
 // Stores
@@ -50,6 +51,7 @@ const RATE_MAX = 5;
 export const challengeStore = new Map<string, ChallengeRecord>();
 
 const rateBuckets = new Map<string, { count: number; windowStart: number }>();
+const verifyRateBuckets = new Map<string, { count: number; windowStart: number }>();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -76,7 +78,18 @@ function isRateLimited(key: string): boolean {
     return false;
   }
   bucket.count += 1;
-  return bucket.count > RATE_MAX;
+  return bucket.count > RATE_MAX_ISSUE;
+}
+
+function isVerifyRateLimited(key: string): boolean {
+  const now = Date.now();
+  const bucket = verifyRateBuckets.get(key);
+  if (!bucket || now - bucket.windowStart > RATE_WINDOW_MS) {
+    verifyRateBuckets.set(key, { count: 1, windowStart: now });
+    return false;
+  }
+  bucket.count += 1;
+  return bucket.count > RATE_MAX_VERIFY;
 }
 
 function evictIfFull(): void {
@@ -90,6 +103,7 @@ function evictIfFull(): void {
 export function clearChallengeStore(): void {
   challengeStore.clear();
   rateBuckets.clear();
+  verifyRateBuckets.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +204,12 @@ export function verifyChallenge(input: ChallengeVerifyInput): ChallengeVerifyRes
     return fail("VALIDATION_ERROR", "signature is required.");
   }
 
+  // AUTH-083: per-address rate-limit for verify as well (defense-in-depth)
+  if (isVerifyRateLimited(walletAddress)) {
+    log("warn", "CHALLENGE_VERIFY_ERROR", { challengeId, walletAddress, reason: "rate_limited", latency_ms: Date.now() - start });
+    return fail("RATE_LIMITED", "Too many verification attempts. Try again later.");
+  }
+
   // --- Look up challenge ---
   const record = challengeStore.get(challengeId);
   if (!record) {
@@ -199,6 +219,8 @@ export function verifyChallenge(input: ChallengeVerifyInput): ChallengeVerifyRes
 
   // --- Expiry check ---
   if (Date.now() > record.expiresAt) {
+    // AUTH-083: cleanup expired challenges to prevent store drift
+    challengeStore.delete(challengeId);
     log("warn", "CHALLENGE_VERIFY_ERROR", { challengeId, reason: "expired", latency_ms: Date.now() - start });
     return fail("CHALLENGE_EXPIRED", "Challenge has expired. Please request a new one.");
   }
