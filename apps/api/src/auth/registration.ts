@@ -20,6 +20,7 @@
  */
 
 import { createHash, randomUUID } from "node:crypto";
+import { createStructuredLogger } from "@qyou/config";
 import type {
   AccountRecord,
   RegistrationErrorCode,
@@ -32,13 +33,7 @@ import { accountsByEmail, getAccountCount } from "./store.js";
 // Structured logger (AUTH-004)
 // ---------------------------------------------------------------------------
 
-type LogLevel = "info" | "warn" | "error";
-
-function log(level: LogLevel, event: string, data?: Record<string, unknown>): void {
-  const entry = { ts: new Date().toISOString(), level, event, ...data };
-  // eslint-disable-next-line no-console
-  console[level === "error" ? "error" : "log"](JSON.stringify(entry));
-}
+const log = createStructuredLogger({ service: "api", component: "auth.registration" });
 
 // ---------------------------------------------------------------------------
 // Helpers

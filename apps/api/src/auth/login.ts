@@ -21,6 +21,7 @@
  */
 
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { createStructuredLogger } from "@qyou/config";
 import type { AccountRecord, LoginErrorCode, LoginInput, LoginResult, TokenPair } from "@qyou/types";
 import { getAccountByEmail } from "./store.js";
 
@@ -28,12 +29,7 @@ import { getAccountByEmail } from "./store.js";
 // Structured logger
 // ---------------------------------------------------------------------------
 
-type LogLevel = "info" | "warn" | "error";
-function log(level: LogLevel, event: string, data?: Record<string, unknown>): void {
-  const entry = { ts: new Date().toISOString(), level, event, ...data };
-  // eslint-disable-next-line no-console
-  console[level === "error" ? "error" : "log"](JSON.stringify(entry));
-}
+const log = createStructuredLogger({ service: "api", component: "auth.login" });
 
 // ---------------------------------------------------------------------------
 // Rate-limit (AUTH-008)
