@@ -8,6 +8,9 @@
   ],
   "scripts": {
     "auth:baseline": "npm run build --workspace @qyou/config && npm run auth:baseline --workspace @qyou/config",
+    "auth:observability": "node scripts/auth-observability-audit.mjs",
+    "auth:monitor": "node scripts/auth-observability-monitor.mjs",
+    "auth:exercise": "npm run build --workspace @qyou/types && npm run build --workspace @qyou/config && node scripts/auth-observability-exercise.mjs",
     "build": "npm run build --workspace @qyou/types && npm run build --workspace @qyou/config && npm run build --workspace @qyou/api && npm run build --workspace @qyou/stellar-service && npm run build --workspace @qyou/web",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:mobile\" \"npm run dev:stellar-service\"",
     "dev:api": "npm run dev --workspace @qyou/api",

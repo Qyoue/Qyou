@@ -2,6 +2,10 @@ import { config as loadDotenv } from "dotenv";
 
 loadDotenv();
 
+export { createStructuredLogger } from "./logger.js";
+export type { LogLevel, StructuredLogEntry, StructuredLoggerOptions } from "./logger.js";
+export { checkAbuse, resetAbuseBuckets } from "./abuse.js";
+
 function parseNumberEnv(
   name: string,
   fallback: number,
