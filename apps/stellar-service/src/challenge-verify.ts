@@ -16,6 +16,7 @@
 
 import { randomBytes, randomUUID } from "node:crypto";
 import { Keypair } from "@stellar/stellar-sdk";
+import { createStructuredLogger } from "@qyou/config";
 import type {
   ChallengeIssueInput,
   ChallengeIssueResult,
@@ -29,11 +30,7 @@ import type {
 // Structured logger
 // ---------------------------------------------------------------------------
 
-type LogLevel = "info" | "warn" | "error";
-function log(level: LogLevel, event: string, data?: Record<string, unknown>): void {
-  const entry = { ts: new Date().toISOString(), level, event, ...data };
-  console[level === "error" ? "error" : "log"](JSON.stringify(entry));
-}
+const log = createStructuredLogger({ service: "stellar-service", component: "auth.challenge_verify" });
 
 // ---------------------------------------------------------------------------
 // Constants

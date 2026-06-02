@@ -40,6 +40,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { createStructuredLogger } from "@qyou/config";
 import type {
   WalletLinkErrorCode,
   WalletLinkInput,
@@ -60,12 +61,7 @@ import type {
 // Structured logger
 // ---------------------------------------------------------------------------
 
-type LogLevel = "info" | "warn" | "error";
-function log(level: LogLevel, event: string, data?: Record<string, unknown>): void {
-  const entry = { ts: new Date().toISOString(), level, event, ...data };
-  // eslint-disable-next-line no-console
-  console[level === "error" ? "error" : "log"](JSON.stringify(entry));
-}
+const log = createStructuredLogger({ service: "stellar-service", component: "auth.wallet_link" });
 
 // ---------------------------------------------------------------------------
 // In-memory store (AUTH-093: bounded)
