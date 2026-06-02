@@ -44,6 +44,7 @@ npm run dev:stellar-service
 
 ```bash
 npm run build
+npm run auth:contracts
 npm run typecheck
 npm run lint
 ```
