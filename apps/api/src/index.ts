@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import type { Request, Response } from "express";
+import { getAuthBaselineReport, loadAuthConfig, loadNodeServiceConfig } from "@qyou/config";
 import { register } from "./auth/registration.js";
 import { login } from "./auth/login.js";
 import { refresh, logout } from "./auth/session.js";
@@ -19,12 +20,28 @@ type AuthBootstrap = {
   sessionStrategy: "jwt";
 };
 
-const port = Number(process.env.PORT ?? 4000);
-const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:3000";
+const serviceConfig = loadNodeServiceConfig({ defaultPort: 4000, serviceName: "api" });
+
+// AUTH-102/103/104: baseline check for shared auth config across workspaces.
+const baseline = getAuthBaselineReport();
+for (const warning of baseline.warnings) {
+  // eslint-disable-next-line no-console
+  console.warn(JSON.stringify({ level: "warn", event: "auth.baseline.warning", warning, ts: new Date().toISOString() }));
+}
+if (!baseline.ok) {
+  for (const error of baseline.errors) {
+    // eslint-disable-next-line no-console
+    console.error(JSON.stringify({ level: "error", event: "auth.baseline.error", error, ts: new Date().toISOString() }));
+  }
+  throw new Error("Shared auth baseline validation failed.");
+}
+
+// Ensure authConfig is loaded early (and validated) on startup.
+loadAuthConfig();
 
 const app = express();
 
-app.use(cors({ origin: corsOrigin }));
+app.use(cors({ origin: serviceConfig.corsOrigin }));
 app.use(express.json());
 
 app.get("/health", (_request, response) => {
@@ -202,6 +219,6 @@ app.post("/api/v1/auth/verify", (request: Request, response: Response) => {
   response.status(statusMap[result.code] ?? 500).json(result);
 });
 
-app.listen(port, () => {
-  console.log(`[api] listening on http://localhost:${port}`);
+app.listen(serviceConfig.port, () => {
+  console.log(`[api] listening on http://localhost:${serviceConfig.port}`);
 });

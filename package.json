@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "auth:contracts": "npm run build --workspace @qyou/types && node scripts/auth-contracts-audit.mjs",
+    "auth:baseline": "npm run build --workspace @qyou/config && npm run auth:baseline --workspace @qyou/config",
     "build": "npm run build --workspace @qyou/types && npm run build --workspace @qyou/config && npm run build --workspace @qyou/api && npm run build --workspace @qyou/stellar-service && npm run build --workspace @qyou/web",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:mobile\" \"npm run dev:stellar-service\"",
     "dev:api": "npm run dev --workspace @qyou/api",

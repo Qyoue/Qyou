@@ -82,6 +82,32 @@ describe("wallet-link completion flow (AUTH-089)", () => {
     if (after.ready) expect(after.walletAddress).toBe(ADDR_B);
   });
 
+  it("link → initiate recovery → rotate invalidates recovery token", () => {
+    link({ accountId: "flow-rotate-1", walletAddress: ADDR_A });
+    const init = initiateRecovery({ accountId: "flow-rotate-1" });
+    expect(init.ok).toBe(true);
+    if (!init.ok) throw new Error("unreachable");
+
+    const rotated = rotate({ accountId: "flow-rotate-1", newWalletAddress: ADDR_B });
+    expect(rotated.ok).toBe(true);
+
+    // Token is invalidated after rotation.
+    const confirm = confirmRecovery({
+      accountId: "flow-rotate-1",
+      recoveryToken: init.recoveryToken,
+      newWalletAddress: ADDR_A,
+    });
+    expect(confirm.ok).toBe(false);
+    if (!confirm.ok) expect(confirm.code).toBe("INVALID_RECOVERY_TOKEN");
+
+    // Store reflects the rotation and no in-progress recovery.
+    const record = walletStore.get("flow-rotate-1");
+    expect(record?.walletAddress).toBe(ADDR_B);
+    expect(record?.recoveryToken).toBeUndefined();
+    expect(record?.recoveryExpiresAt).toBeUndefined();
+    expect(recoveryStore.has(init.recoveryToken)).toBe(false);
+  });
+
   it("link → unlink → readiness returns NO_WALLET_LINKED", () => {
     link({ accountId: "flow-4", walletAddress: ADDR_A });
     unlink({ accountId: "flow-4" });

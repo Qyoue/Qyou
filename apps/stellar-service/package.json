@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/index.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern='(challenge-verify|reward-account-readiness)' && node --import tsx/esm --test src/wallet-link.test.ts",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --watchman=false --testPathPattern='(challenge-verify|reward-account-readiness|wallet-link)'",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "jest": {
@@ -25,6 +25,7 @@
     }
   },
   "dependencies": {
+    "@qyou/config": "*",
     "@qyou/types": "*",
     "@stellar/stellar-sdk": "^14.3.3",
     "express": "^5.1.0"

@@ -2,6 +2,7 @@ import express from "express";
 import type { Request, Response } from "express";
 import { Horizon } from "@stellar/stellar-sdk";
 import type { RewardAccountReadinessResult } from "@qyou/types";
+import { getAuthBaselineReport, loadNodeServiceConfig, loadStellarAuthConfig } from "@qyou/config";
 import { link, unlink, rotate, initiateRecovery, confirmRecovery, checkRewardReadiness } from "./wallet-link.js";
 import { issueChallenge, verifyChallenge } from "./challenge-verify.js";
 import type {
@@ -26,11 +27,22 @@ type StellarServiceInfo = {
   rpcUrl: string;
 };
 
-const port = Number(process.env.PORT ?? 4100);
-const network = process.env.STELLAR_NETWORK ?? "testnet";
-const rpcUrl = process.env.STELLAR_RPC_URL ?? "https://soroban-testnet.stellar.org";
-const horizonUrl = process.env.STELLAR_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
-const horizonServer = new Horizon.Server(horizonUrl);
+const serviceConfig = loadNodeServiceConfig({ defaultPort: 4100, serviceName: "stellar-service" });
+const stellarConfig = loadStellarAuthConfig();
+
+// AUTH-102/103/104: baseline check for shared auth config across workspaces.
+const baseline = getAuthBaselineReport();
+for (const warning of baseline.warnings) {
+  console.warn(JSON.stringify({ level: "warn", event: "auth.baseline.warning", warning, ts: new Date().toISOString() }));
+}
+if (!baseline.ok) {
+  for (const error of baseline.errors) {
+    console.error(JSON.stringify({ level: "error", event: "auth.baseline.error", error, ts: new Date().toISOString() }));
+  }
+  throw new Error("Shared auth baseline validation failed.");
+}
+
+const horizonServer = new Horizon.Server(stellarConfig.horizonUrl);
 
 const app = express();
 app.use(express.json());
@@ -70,8 +82,8 @@ app.get("/api/v1/stellar/info", async (_req, res) => {
     const latestLedger = await horizonServer.ledgers().order("desc").limit(1).call();
     res.json({
       latestLedgerSequence: latestLedger.records[0]?.sequence ?? null,
-      network,
-      rpcUrl
+      network: stellarConfig.network,
+      rpcUrl: stellarConfig.rpcUrl
     });
   } catch (err) {
     logError("stellar.info.failed", { error: String(err) });
@@ -413,6 +425,11 @@ app.post("/api/v1/stellar/challenge/verify", (request: Request, response: Respon
   response.status(statusMap[result.code] ?? 500).json(result);
 });
 
-app.listen(port, () => {
-  logInfo("stellar_service.started", { port, network, horizonUrl, rpcUrl });
+app.listen(serviceConfig.port, () => {
+  logInfo("stellar_service.started", {
+    port: serviceConfig.port,
+    network: stellarConfig.network,
+    horizonUrl: stellarConfig.horizonUrl,
+    rpcUrl: stellarConfig.rpcUrl
+  });
 });
