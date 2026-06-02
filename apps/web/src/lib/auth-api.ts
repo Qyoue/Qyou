@@ -41,29 +41,31 @@ export async function loginAccount(input: LoginInput): Promise<LoginResult> {
   return res.json() as Promise<LoginResult>;
 }
 
-export async function requestPasswordReset(email: string): Promise<ResetRequestResult> {
+export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResult> {
+  const input: PasswordResetRequestInput = { email };
   const res = await fetch(`${API_BASE}/api/v1/auth/password-reset/request`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify(input),
   });
-  return res.json() as Promise<ResetRequestResult>;
+  return res.json() as Promise<PasswordResetRequestResult>;
 }
 
-export async function confirmPasswordReset(token: string, newPassword: string): Promise<ResetConfirmResult> {
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<PasswordResetConfirmResult> {
+  const input: PasswordResetConfirmInput = { token, newPassword };
   const res = await fetch(`${API_BASE}/api/v1/auth/password-reset/confirm`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, newPassword }),
+    body: JSON.stringify(input),
   });
-  return res.json() as Promise<ResetConfirmResult>;
+  return res.json() as Promise<PasswordResetConfirmResult>;
 }
 
-export async function verifyEmailToken(token: string): Promise<VerifyResult> {
+export async function verifyEmailToken(token: string): Promise<VerificationResult> {
   const res = await fetch(`${API_BASE}/api/v1/auth/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
   });
-  return res.json() as Promise<VerifyResult>;
+  return res.json() as Promise<VerificationResult>;
 }
