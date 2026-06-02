@@ -30,6 +30,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import type { LogoutInput, LogoutResult, RefreshInput, RefreshResult, SessionErrorCode, TokenPair } from "@qyou/types";
+import { loadAuthConfig } from "@qyou/config";
 import { refreshStore } from "./login.js";
 
 // ---------------------------------------------------------------------------
@@ -52,9 +53,10 @@ function tokenPrefix(token: string): string {
 // Token helpers (mirrors login.ts — same secret, same algorithm)
 // ---------------------------------------------------------------------------
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-production";
-const ACCESS_TTL_MS = 15 * 60 * 1000;
-const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const authConfig = loadAuthConfig();
+const JWT_SECRET = authConfig.jwtSecret;
+const ACCESS_TTL_MS = authConfig.accessTokenTtlSeconds * 1000;
+const REFRESH_TTL_MS = authConfig.refreshTokenTtlSeconds * 1000;
 
 // AUTH-013: cap the in-memory store to prevent unbounded growth
 const STORE_MAX_SIZE = 10_000;
