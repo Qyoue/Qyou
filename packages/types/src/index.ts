@@ -268,3 +268,55 @@ export type ChallengeErrorCode =
   | "INVALID_SIGNATURE"
   | "RATE_LIMITED"
   | "INTERNAL_ERROR";
+
+// --- Abuse Controls & Device Trust (AUTH-116) ---
+
+/**
+ * Lightweight device-trust record stored per account.
+ * "trusted" = previously verified; "suspicious" = flagged for step-up.
+ */
+export type DeviceTrustRecord = {
+  deviceId: string;
+  accountId: string;
+  userAgent?: string;
+  /** ISO-8601 */
+  firstSeenAt: string;
+  /** ISO-8601 */
+  lastSeenAt: string;
+  trusted: boolean;
+};
+
+/**
+ * A single rate-limit bucket for an abuse-control dimension
+ * (e.g. per-IP login attempts, per-account password resets).
+ */
+export type RateLimitBucket = {
+  key: string;
+  count: number;
+  /** Unix ms — window resets after this point */
+  resetAt: number;
+};
+
+/** Result returned by an abuse-check gate before an auth operation proceeds. */
+export type AbuseCheckResult =
+  | { allowed: true }
+  | { allowed: false; code: AbuseCheckCode; retryAfterMs?: number };
+
+export type AbuseCheckCode =
+  | "RATE_LIMITED"
+  | "ACCOUNT_LOCKED"
+  | "SUSPICIOUS_DEVICE"
+  | "BLOCKED_IP";
+
+/**
+ * Inputs the abuse-control layer consumes on each auth attempt.
+ * All fields are optional so callers supply what they have.
+ */
+export type AbuseContext = {
+  accountId?: string;
+  /** IPv4 or IPv6 address of the caller */
+  ip?: string;
+  deviceId?: string;
+  /** The auth operation being attempted */
+  operation: "login" | "register" | "password-reset" | "challenge-verify";
+};
