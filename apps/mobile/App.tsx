@@ -1,175 +1,28 @@
-import { StatusBar } from "expo-status-bar";
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
-import { useState, useEffect } from "react";
-
-const authPreview = {
-  providers: ["email-password", "stellar-wallet-link"],
-  sessionStrategy: "jwt",
-  nextStep: "Build mobile sign-up, sign-in, session restore, and wallet linking."
-} as const;
-
-// ---------------------------------------------------------------------------
-// AUTH-069: Biometric session restore instrumentation
-// ---------------------------------------------------------------------------
-
-type BiometricRestoreStep =
-  | "idle"
-  | "checking"
-  | "prompting"
-  | "restoring"
-  | "restored"
-  | "skipped"
-  | "failed";
-
-function logBiometric(event: string, meta: Record<string, unknown> = {}): void {
-  console.log(JSON.stringify({ ts: new Date().toISOString(), context: "biometric-restore", event, ...meta }));
-}
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function App() {
-  const [step, setStep] = useState<"start" | "submit" | "success" | "error">("start");
-  const [biometricStep, setBiometricStep] = useState<BiometricRestoreStep>("idle");
-
-  // AUTH-069: instrument the biometric session restore bootstrap sequence
-  useEffect(() => {
-    setBiometricStep("checking");
-    logBiometric("BIOMETRIC_RESTORE_CHECK", { checkpoint: "bootstrap_start" });
-
-    // Simulate checking for a stored biometric credential
-    const hasStoredCredential = false; // placeholder until SecureStore integration
-    if (!hasStoredCredential) {
-      setBiometricStep("skipped");
-      logBiometric("BIOMETRIC_RESTORE_SKIPPED", { reason: "no_stored_credential" });
-      return;
-    }
-
-    setBiometricStep("prompting");
-    logBiometric("BIOMETRIC_RESTORE_PROMPT", { checkpoint: "awaiting_user" });
-  }, []);
-
-  const simulateBiometricRestore = (outcome: "success" | "failure") => {
-    setBiometricStep("restoring");
-    logBiometric("BIOMETRIC_RESTORE_ATTEMPT", { checkpoint: "restore_start" });
-
-    if (outcome === "success") {
-      setBiometricStep("restored");
-      logBiometric("BIOMETRIC_RESTORE_OK", { checkpoint: "session_restored" });
-    } else {
-      setBiometricStep("failed");
-      logBiometric("BIOMETRIC_RESTORE_ERROR", { reason: "auth_failed", checkpoint: "restore_failed" });
-    }
-  };
-
-  const logSignupEvent = (event: string, meta: Record<string, string> = {}) => {
-    console.log("[mobile-signup]", event, meta);
-  };
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
-      <View style={styles.card}>
-        <Text style={styles.eyebrow}>Qyou mobile starter</Text>
-        <Text style={styles.title}>Auth comes first.</Text>
-        <Text style={styles.body}>
-          This Expo workspace is a clean landing zone for hackathon contributors. The first milestone is shared
-          authentication across mobile, web, API, and Stellar-linked identity flows.
-        </Text>
-        <Text style={styles.body}>Checkpoint: {step}</Text>
-        <Text style={styles.body}>Biometric restore: {biometricStep}</Text>
-        <View style={styles.actions}>
-          <Pressable
-            style={styles.button}
-            onPress={() => {
-              setStep("submit");
-              logSignupEvent("signup_attempted");
-            }}
-          >
-            <Text style={styles.buttonText}>Simulate Submit</Text>
-          </Pressable>
-          <Pressable
-            style={styles.button}
-            onPress={() => {
-              setStep("success");
-              logSignupEvent("signup_succeeded");
-            }}
-          >
-            <Text style={styles.buttonText}>Simulate Success</Text>
-          </Pressable>
-          <Pressable
-            style={styles.button}
-            onPress={() => {
-              setStep("error");
-              logSignupEvent("signup_failed", { reason: "network" });
-            }}
-          >
-            <Text style={styles.buttonText}>Simulate Failure</Text>
-          </Pressable>
-          <Pressable style={styles.button} onPress={() => simulateBiometricRestore("success")}>
-            <Text style={styles.buttonText}>Biometric Restore ✓</Text>
-          </Pressable>
-          <Pressable style={styles.button} onPress={() => simulateBiometricRestore("failure")}>
-            <Text style={styles.buttonText}>Biometric Restore ✗</Text>
-          </Pressable>
-        </View>
-        <Text style={styles.code}>{JSON.stringify(authPreview, null, 2)}</Text>
-      </View>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <Text style={styles.title}>Qyou Mobile</Text>
+      <Text style={styles.subtitle}>Foundation ready</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    alignItems: "center",
-    backgroundColor: "#f4ecdf",
+  container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 24
-  },
-  card: {
-    backgroundColor: "#fff9f1",
-    borderColor: "#ddb38c",
-    borderRadius: 28,
-    borderWidth: 1,
-    gap: 14,
-    maxWidth: 420,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 24,
-    width: "100%"
-  },
-  eyebrow: {
-    color: "#a24a21",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 2,
-    textTransform: "uppercase"
   },
   title: {
-    color: "#1f1d1a",
-    fontSize: 32,
-    fontWeight: "700"
+    fontSize: 24,
+    fontWeight: '600',
   },
-  body: {
-    color: "#5f584f",
+  subtitle: {
+    marginTop: 8,
     fontSize: 16,
-    lineHeight: 24
+    color: '#666666',
   },
-  code: {
-    backgroundColor: "#1f1d1a",
-    borderRadius: 18,
-    color: "#f7f0e4",
-    fontFamily: "Courier",
-    overflow: "hidden",
-    padding: 16
-  },
-  actions: {
-    gap: 8
-  },
-  button: {
-    backgroundColor: "#1f1d1a",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600"
-  }
 });

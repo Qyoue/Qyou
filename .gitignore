@@ -1,14 +1,13 @@
-node_modules
-.DS_Store
+node_modules/
+dist/
+build/
+.next/
+.expo/
+.turbo/
+*.tsbuildinfo
+coverage/
 .env
 .env.local
-.next
-dist
-coverage
-.expo
-.turbo
-*.tsbuildinfo
+.env.*.local
 npm-debug.log*
-
-# Local planning and GitHub publishing artifacts
-.repo-ops/
+.DS_Store
