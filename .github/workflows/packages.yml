@@ -1,0 +1,28 @@
+name: Packages CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  packages:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: ['@qyou/shared', '@qyou/stellar']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build -w ${{ matrix.package }}
+
+      - name: Lint
+        run: npm run lint -w ${{ matrix.package }}
