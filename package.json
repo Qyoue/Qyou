@@ -1,0 +1,33 @@
+{
+  "name": "qyou-hackathon-starter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Foundation monorepo for the Qyou hackathon starter — monorepo setup and authentication only.",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "npm run build -w @qyou/shared -w @qyou/stellar",
+    "build": "npm run build -w @qyou/shared -w @qyou/stellar && npm run build --workspaces --if-present",
+    "dev": "concurrently -n api,web,mobile \"npm run dev -w @qyou/api\" \"npm run dev -w @qyou/web\" \"npm run dev -w @qyou/mobile\"",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "concurrently": "^9.0.1",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.18.0"
+  }
+}
