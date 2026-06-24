@@ -6,3 +6,5 @@
  * location to add Stellar-related types.
  */
 export type StellarPackagePlaceholder = Record<string, never>;
+
+export * from './wallet-link.types.js';

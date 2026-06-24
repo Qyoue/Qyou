@@ -15,9 +15,10 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "echo \"@qyou/stellar has no runtime tests\""
+    "test": "node --import tsx --test src/tests/*.test.ts"
   },
   "devDependencies": {
+    "tsx": "^4.19.2",
     "typescript": "^5.9.3"
   }
 }
