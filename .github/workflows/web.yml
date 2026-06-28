@@ -7,6 +7,10 @@ on:
 jobs:
   web:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -29,3 +33,4 @@ jobs:
 
       - name: Build
         run: npm run build -w @qyou/web
+        continue-on-error: false

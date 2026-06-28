@@ -7,6 +7,10 @@ on:
 jobs:
   packages:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
     strategy:
       matrix:
         package: ['@qyou/shared', '@qyou/stellar']

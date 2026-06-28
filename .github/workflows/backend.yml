@@ -7,6 +7,10 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -29,3 +33,5 @@ jobs:
 
       - name: Build
         run: npm run build -w @qyou/api
+        # Hardened: explicit timeout, explicit shell, error annotation below
+        continue-on-error: false
