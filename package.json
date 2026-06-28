@@ -16,7 +16,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "check:env": "tsx scripts/check-env-workflow.ts",
+    "test:env-contract": "node --import tsx --test scripts/__tests__/env-contract.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
