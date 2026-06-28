@@ -16,7 +16,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "validate:lint-ergonomics": "node --import tsx scripts/lint-typecheck-ergonomics.ts",
+    "lint-harden:ci": "node --import tsx scripts/lint-typecheck-hardening.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
