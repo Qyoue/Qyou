@@ -20,6 +20,9 @@
     "validate:ci-phase3": "node --import tsx scripts/ci-pipeline-workflow-phase3.ts",
     "ci-harden-phase3:ci": "node --import tsx scripts/ci-pipeline-hardening-phase3.ts",
     "test:ci-phase3-pipeline": "node --import tsx scripts/__tests__/ci-pipeline-phase3.test.ts"
+    "validate:ci-stability": "node --import tsx scripts/__tests__/ci-pipeline-stability.test.ts",
+    "ci-harden:check": "node --import tsx scripts/ci-pipeline-hardening.ts",
+    "test:lint-contract": "node --import tsx scripts/__tests__/lint-typecheck-contract.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
