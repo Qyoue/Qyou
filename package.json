@@ -17,9 +17,8 @@
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "test:env-phase3-secrets": "node --import tsx scripts/__tests__/env-secret-phase3.test.ts",
-    "env-harden-phase3:ci": "node --import tsx scripts/env-secret-hardening-phase3.ts",
-    "test:ci-phase3": "node --import tsx scripts/__tests__/ci-pipeline-contract-phase3.test.ts"
+    "check:env": "tsx scripts/check-env-workflow.ts",
+    "test:env-contract": "node --import tsx --test scripts/__tests__/env-contract.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
