@@ -16,7 +16,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "test:lint-phase1": "node --import tsx scripts/__tests__/lint-typecheck-phase1.test.ts",
+    "lint-harden-phase1:ci": "node --import tsx scripts/lint-typecheck-harden-phase1.ts",
+    "test:docs-phase1": "node --import tsx scripts/__tests__/docs-contract-phase1.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
