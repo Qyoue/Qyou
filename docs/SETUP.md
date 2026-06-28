@@ -49,3 +49,25 @@ Copy `apps/mobile/.env.example` to `apps/mobile/.env`:
 * `.env*` files are gitignored — never commit real secrets.
 * `.env.example` files document required variables with safe placeholder values only.
 * Use a long, randomly generated `JWT_SECRET` in any shared, staging, or production environment.
+
+## Failure behavior
+
+* If a required variable is missing and has no default, Zod validation in `src/shared/config/env.ts`
+  throws a clear error at startup. The API will not start until the variable is set.
+* Variables with safe defaults (see table above) allow the API to start without a `.env` file for
+  development and testing. Override them in `.env` when connecting to real services.
+* The test suite uses an `InMemoryAuthRepository` and never reads `DATABASE_URL`, so tests pass
+  without a running PostgreSQL instance.
+
+## Validating environment configuration
+
+Run the env validation script to check that `.env.example` files are consistent and documented:
+
+```bash
+npm run validate:env
+```
+
+This script checks:
+- Every variable in `.env.example` is documented in `docs/SETUP.md`
+- No placeholder values (e.g., `change-me`) are used without a clear documentation note
+- No duplicate values across variables within the same file
