@@ -16,7 +16,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "validate:boundary": "node --import tsx scripts/workspace-workflow.ts",
+    "boundary-check:ci": "node --import tsx scripts/workspace-boundary-check.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
