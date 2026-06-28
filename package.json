@@ -17,8 +17,8 @@
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "validate:phase3": "node --import tsx scripts/workspace-scripts-workflow-phase3.ts",
-    "test:phase3-contract": "node --import tsx scripts/__tests__/workspace-scripts-contract-phase3.test.ts"
+    "check:env": "tsx scripts/check-env-workflow.ts",
+    "test:env-contract": "node --import tsx --test scripts/__tests__/env-contract.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
