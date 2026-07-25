@@ -1,4 +1,11 @@
-import type { AuthResponse, LoginInput, RegisterInput } from '@qyou/shared';
+import type {
+  AuthResponse,
+  LoginInput,
+  RegisterInput,
+  SessionLifecyclePayload,
+  TokenRefreshInput,
+  TokenRefreshResponse,
+} from '@qyou/shared';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -29,3 +36,12 @@ export function login(input: LoginInput): Promise<AuthResponse> {
 export function register(input: RegisterInput): Promise<AuthResponse> {
   return postJson<AuthResponse>('/api/auth/register', input);
 }
+
+export function refreshToken(input: TokenRefreshInput): Promise<TokenRefreshResponse> {
+  return postJson<TokenRefreshResponse>('/api/auth/refresh', input);
+}
+
+export function validateSession(sessionId: string): Promise<SessionLifecyclePayload> {
+  return postJson<SessionLifecyclePayload>('/api/auth/session/validate', { sessionId });
+}
+
