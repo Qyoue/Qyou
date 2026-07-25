@@ -7,6 +7,8 @@ export interface AuthUser {
 
 export interface AuthTokens {
   accessToken: string;
+  refreshToken?: string;
+  expiresIn?: number;
 }
 
 export interface AuthResponse {
@@ -14,29 +16,27 @@ export interface AuthResponse {
   tokens: AuthTokens;
 }
 
-export interface AuthContractVersion {
-  version: string;
-  deprecated: boolean;
-  supportedFeatures: string[];
-}
-
-export interface SchemaEvolutionConfig {
-  schemaVersion: number;
-  strictMode: boolean;
-  allowLegacyFallback: boolean;
-}
-
-export interface PasswordSafetyPolicy {
-  minLength: number;
-  requireUppercase: boolean;
-  requireNumbers: boolean;
-  requireSpecialChars: boolean;
-}
-
-export interface AccountSafetyPayload {
+export interface SessionLifecyclePayload {
+  sessionId: string;
   userId: string;
-  lockoutRemainingSeconds?: number;
-  failedAttempts: number;
-  isLocked: boolean;
+  issuedAt: number;
+  expiresAt: number;
+  isValid: boolean;
+}
+
+export interface TokenRefreshInput {
+  refreshToken: string;
+}
+
+export interface TokenRefreshResponse {
+  tokens: AuthTokens;
+}
+
+export type SessionStatus = 'active' | 'expired' | 'revoked';
+
+export interface SessionState {
+  user: AuthUser | null;
+  status: SessionStatus;
+  lastActiveAt?: string;
 }
 
