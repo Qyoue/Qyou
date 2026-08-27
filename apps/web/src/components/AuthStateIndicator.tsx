@@ -1,3 +1,10 @@
+/**
+ * AuthStateIndicator states:
+ * 1. Authenticated: Shows green indicator dot and signed-in status.
+ * 2. Unauthenticated: Shows red indicator dot and not signed in.
+ */
+export type AuthIndicatorState = "AUTHENTICATED" | "UNAUTHENTICATED";
+
 import React from 'react';
 
 interface AuthStateIndicatorProps {
