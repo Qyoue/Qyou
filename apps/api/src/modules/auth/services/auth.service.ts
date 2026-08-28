@@ -8,6 +8,17 @@ import type { AuthUserRecord } from '../types/auth.types.js';
 
 const SALT_ROUNDS = 10;
 
+/**
+ * AuthService boundary (#810).
+ *
+ * Responsibilities:
+ * - Register and authenticate users (password hashing + JWT issuance).
+ * - Owns the canonical `AuthUserRecord` → `AuthResponse` mapping.
+ *
+ * This service SHOULD NOT contain account-safety policy (lockout thresholds,
+ * email-change rules) — those live in `AccountSafetyService`. It also does not
+ * validate request shape; that is the validators' job before the service is hit.
+ */
 export class AuthService {
   constructor(private readonly authRepository: AuthRepository) {}
 
