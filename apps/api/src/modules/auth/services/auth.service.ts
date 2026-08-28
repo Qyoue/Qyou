@@ -7,6 +7,17 @@ import type { AuthRepository } from '../repositories/auth.repository.js';
 import type { AuthUserRecord } from '../types/auth.types.js';
 import { AccountSafetyService } from './account-safety.service.js';
 
+/**
+ * AuthService boundary (#810).
+ *
+ * Responsibilities:
+ * - Register and authenticate users (password hashing + JWT issuance).
+ * - Owns the canonical `AuthUserRecord` → `AuthResponse` mapping.
+ *
+ * This service SHOULD NOT contain account-safety policy (lockout thresholds,
+ * email-change rules) — those live in `AccountSafetyService`. It also does not
+ * validate request shape; that is the validators' job before the service is hit.
+ */
 export class AuthService {
   private readonly accountSafety = new AccountSafetyService();
   private readonly failedAttempts = new Map<string, number>();

@@ -5,6 +5,7 @@ import { rateLimit } from 'express-rate-limit';
 import { createAuthRouter } from './modules/auth/routes/auth.routes.js';
 import { PrismaAuthRepository } from './modules/auth/repositories/auth.repository.js';
 import type { AuthRepository } from './modules/auth/repositories/auth.repository.js';
+import { InMemoryAuthRepository } from './modules/auth/repositories/in-memory-auth.repository.js';
 import { prisma } from './shared/database/prisma.js';
 import { errorHandler } from './shared/middleware/error-handler.js';
 import { env } from './shared/config/env.js';
@@ -107,6 +108,14 @@ const openApiSpec = {
 };
 
 export function createApp(deps: AppDependencies = {}): Express {
+  // #811: never boot production with the in-memory auth repository — it resets
+  // state on restart and is intended for tests/local dev only.
+  if (deps.authRepository instanceof InMemoryAuthRepository && env.NODE_ENV === 'production') {
+    throw new Error(
+      'InMemoryAuthRepository must not be used in production. Use PrismaAuthRepository.',
+    );
+  }
+
   const app = express();
 
   // #801: standard security headers (HSTS, X-Content-Type-Options, etc.)
