@@ -1,3 +1,6 @@
+// #823: This component is named "RealTime" but currently uses polled/static
+// props. A real-time transport (SSE or WebSocket) is not yet implemented.
+// TODO: wire to a GET /api/queue/:id/stream SSE endpoint once the queue API ships.
 import React from 'react';
 
 interface RealTimeWaitTimeCardProps {
