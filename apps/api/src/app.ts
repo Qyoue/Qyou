@@ -13,6 +13,10 @@ export interface AppDependencies {
 export function createApp(deps: AppDependencies = {}): Express {
   const app = express();
 
+  // #839: CSRF strategy — auth uses Bearer tokens in Authorization headers
+  // (not cookies), so standard CSRF attacks do not apply. If cookie-based
+  // sessions are added in future, add a double-submit cookie or synchroniser
+  // token at that point. Document the decision here for reviewers.
   app.use(cors());
   app.use(express.json());
 
