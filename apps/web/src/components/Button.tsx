@@ -6,8 +6,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ loading = false, disabled, children, ...rest }: ButtonProps) {
+  const isDisabled = disabled || loading;
   return (
-    <button type="button" disabled={disabled || loading} {...rest}>
+    <button
+      type="button"
+      disabled={isDisabled}
+      aria-disabled={isDisabled}
+      aria-busy={loading}
+      {...rest}
+    >
       {loading ? <Spinner /> : children}
     </button>
   );
