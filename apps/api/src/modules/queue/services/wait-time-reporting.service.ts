@@ -5,6 +5,10 @@ import {
   type WaitTimeTrendMetrics,
 } from '@qyou/shared';
 
+// #822: Concurrency model — this service uses an in-memory Map; concurrent
+// join/leave events are serialised by Node's single-threaded event loop so
+// no explicit locking is required. If the repository is replaced with a
+// real DB, use a transaction or optimistic locking to prevent count drift.
 export class WaitTimeReportingService {
   private readonly reports: Map<string, RealTimeWaitReport[]> = new Map();
 
