@@ -1,3 +1,5 @@
+// #834: logout button is present; onLogout should clear local auth state
+// (localStorage + context) and call the backend logout endpoint when it ships.
 interface AuthStatusProps {
   email: string;
   onLogout: () => void;
