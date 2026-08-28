@@ -42,6 +42,18 @@ describe('Auth routes', () => {
 
       assert.equal(response.status, 400);
     });
+
+    it('normalizes mixed-case/whitespace email so it collides with a lowercase account (#806)', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({ email: '  Test@Example.com ', password: 'password123' });
+
+      const second = await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'test@example.com ', password: 'password123' });
+
+      assert.equal(second.status, 409);
+    });
   });
 
   describe('POST /api/auth/login', () => {

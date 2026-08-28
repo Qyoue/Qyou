@@ -93,3 +93,6 @@ that work is explicitly scoped.
 * Do not implement features outside this repository's current scope (monorepo setup +
   authentication) without first discussing the change.
 * Add or extend tests for any new behavior.
+* Validators follow this naming convention: `<domain>.validator.ts` (e.g. `token.validator.ts`,
+  `account-safety.validator.ts`). Do **not** use `phaseN` suffixes once a validator has stabilized —
+  drop the suffix and consolidate duplicates instead (#809).

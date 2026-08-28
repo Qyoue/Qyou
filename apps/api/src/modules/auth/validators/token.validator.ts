@@ -2,9 +2,11 @@ import {
   slidingSessionSchema,
   tokenRevocationSchema,
   type TokenValidationPhase4Report,
+  authTokenHeaderSchema,
+  type TokenValidationOutcome,
 } from '@qyou/shared';
 
-export function evaluatePhase4TokenState(expTimestamp: number): TokenValidationPhase4Report {
+export function evaluateTokenState(expTimestamp: number): TokenValidationPhase4Report {
   const nowInSeconds = Math.floor(Date.now() / 1000);
   const timeRemainingSeconds = expTimestamp - nowInSeconds;
 
@@ -18,4 +20,16 @@ export function evaluatePhase4TokenState(expTimestamp: number): TokenValidationP
     requiresRefresh: timeRemainingSeconds < RENEW_THRESHOLD_SECONDS,
     timeRemainingSeconds,
   };
+}
+
+export function validateAuthorizationHeader(authHeader: unknown): TokenValidationOutcome {
+  const result = authTokenHeaderSchema.safeParse({ authorization: authHeader });
+  if (!result.success) {
+    return {
+      isValid: false,
+      failureReason: result.error.errors[0]?.message ?? 'Invalid header',
+    };
+  }
+
+  return { isValid: true };
 }
