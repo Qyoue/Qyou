@@ -61,4 +61,22 @@ describe('AuthService', () => {
       );
     });
   });
+
+  describe('account lockout (#804)', () => {
+    it('blocks login after the failed-attempt threshold', async () => {
+      await authService.register({ email: 'lockout@example.com', password: 'password123' });
+
+      for (let i = 0; i < 5; i += 1) {
+        await assert.rejects(
+          () => authService.login({ email: 'lockout@example.com', password: 'wrong-pass' }),
+          /Invalid email or password/,
+        );
+      }
+
+      await assert.rejects(
+        () => authService.login({ email: 'lockout@example.com', password: 'password123' }),
+        /temporarily locked/,
+      );
+    });
+  });
 });

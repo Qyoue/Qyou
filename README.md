@@ -163,6 +163,25 @@ npm run build      # Build every workspace
 
 ---
 
+## Security
+
+### Auth token storage & CSRF strategy (#805)
+
+The API authenticates with **Bearer tokens sent in the `Authorization` header**, not cookies.
+Because the browser does not automatically attach these tokens to cross-site requests, the standard
+CSRF attack vector (session cookie riding along on a forged request) does **not** apply.
+
+Consequently **no CSRF-protection middleware is currently required**. If a future change stores the
+token in an `HttpOnly` cookie instead, a double-submit-cookie or synchroniser-token (CSRF) strategy
+must be added at that point.
+
+### bcrypt cost factor (#803)
+
+Password hashing uses `bcryptjs` with a cost factor configurable via the `BCRYPT_SALT_ROUNDS`
+environment variable (default `12`, enforced minimum `12`). See `apps/api/.env.example`.
+
+---
+
 ## License
 
 MIT
