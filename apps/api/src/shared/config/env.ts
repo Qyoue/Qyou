@@ -12,6 +12,7 @@ const envSchema = z.object({
       { message: 'JWT_SECRET must be at least 32 characters in production' },
     ),
   JWT_EXPIRES_IN: z.string().default('1h'),
+  BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(12).default(12),
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:3000')

@@ -5,10 +5,12 @@ import { env } from '../../../shared/config/env.js';
 import { ConflictError, UnauthorizedError } from '../../../shared/errors/index.js';
 import type { AuthRepository } from '../repositories/auth.repository.js';
 import type { AuthUserRecord } from '../types/auth.types.js';
-
-const SALT_ROUNDS = 10;
+import { AccountSafetyService } from './account-safety.service.js';
 
 export class AuthService {
+  private readonly accountSafety = new AccountSafetyService();
+  private readonly failedAttempts = new Map<string, number>();
+
   constructor(private readonly authRepository: AuthRepository) {}
 
   async register(input: RegisterInput): Promise<AuthResponse> {
@@ -17,13 +19,19 @@ export class AuthService {
       throw new ConflictError('An account with this email already exists.');
     }
 
-    const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(input.password, env.BCRYPT_SALT_ROUNDS);
     const user = await this.authRepository.create({ email: input.email, passwordHash });
 
     return this.toAuthResponse(user);
   }
 
   async login(input: LoginInput): Promise<AuthResponse> {
+    // #804: reject logins once the account exceeds the failed-attempt threshold.
+    const status = this.accountSafety.evaluateLockout(this.failedAttempts.get(input.email) ?? 0);
+    if (status.isLocked) {
+      throw new UnauthorizedError(status.lockoutReason ?? 'Account is temporarily locked.');
+    }
+
     const user = await this.authRepository.findByEmail(input.email);
     if (!user) {
       throw new UnauthorizedError('Invalid email or password.');
@@ -35,9 +43,11 @@ export class AuthService {
 
     const isValidPassword = await bcrypt.compare(input.password, user.passwordHash);
     if (!isValidPassword) {
+      this.failedAttempts.set(input.email, (this.failedAttempts.get(input.email) ?? 0) + 1);
       throw new UnauthorizedError('Invalid email or password.');
     }
 
+    this.failedAttempts.delete(input.email);
     return this.toAuthResponse(user);
   }
 
