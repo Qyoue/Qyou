@@ -5,6 +5,8 @@ import { PrismaAuthRepository } from './modules/auth/repositories/auth.repositor
 import type { AuthRepository } from './modules/auth/repositories/auth.repository.js';
 import { prisma } from './shared/database/prisma.js';
 import { errorHandler } from './shared/middleware/error-handler.js';
+import { metricsMiddleware, renderMetrics } from './shared/middleware/metrics.js';
+import { requestIdMiddleware } from './shared/middleware/request-id.js';
 import { env } from './shared/config/env.js';
 
 export interface AppDependencies {
@@ -113,6 +115,8 @@ export function createApp(deps: AppDependencies = {}): Express {
   // token at that point. Document the decision here for reviewers.
   app.use(cors());
   app.use(express.json());
+  app.use(requestIdMiddleware);
+  app.use(metricsMiddleware);
 
   const authRepository = deps.authRepository ?? new PrismaAuthRepository(prisma);
 
@@ -122,8 +126,19 @@ export function createApp(deps: AppDependencies = {}): Express {
   // Keep /api/auth as a redirect alias for backwards compatibility during migration
   app.use('/api/auth', createAuthRouter(authRepository));
 
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'ok' });
+  // #815: health check for uptime monitors/load balancers — probes DB connectivity.
+  app.get('/health', async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ status: 'ok', db: 'up' });
+    } catch {
+      res.status(503).json({ status: 'degraded', db: 'down' });
+    }
+  });
+
+  // #817: Prometheus-format metrics for scapers/observability backends.
+  app.get('/metrics', (_req, res) => {
+    res.type('text/plain; version=0.0.4').send(renderMetrics());
   });
 
   // Serve OpenAPI spec at /docs (#820)

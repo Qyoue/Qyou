@@ -16,19 +16,18 @@ export class AuthController {
   };
 
   login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.status(200).json({ message: 'Logged out successfully' });
+      const input = loginSchema.parse(req.body);
+      const result = await this.authService.login(input);
+      res.status(200).json(result);
     } catch (error) {
       next(error);
     }
   };
 
-  
+  logout = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const input = loginSchema.parse(req.body);
-      const result = await this.authService.login(input);
-      res.status(200).json(result);
+      res.status(200).json({ message: 'Logged out successfully' });
     } catch (error) {
       next(error);
     }

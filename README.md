@@ -128,6 +128,22 @@ npm run dev -w @qyou/mobile
 
 ---
 
+## Operations
+
+The API exposes the following endpoints for uptime monitoring and observability:
+
+* `GET /health` — liveness/readiness probe. Returns `{ status: "ok", db: "up" }` when the database
+  is reachable, or HTTP `503` with `{ status: "degraded", db: "down" }` when it is not. Point uptime
+  monitors and load-balancer health checks at this endpoint.
+* `GET /metrics` — exposes basic request metrics (request counts and cumulative request duration)
+  in Prometheus text format (`text/plain; version=0.0.4`) for scraping by an observability backend.
+
+Every request is assigned a correlation id (the value of the incoming `X-Request-Id` header or a
+generated UUID) that is echoed in the `X-Request-Id` response header and included in all log lines
+(`[req:<id>]`) emitted for that request.
+
+---
+
 ## Running Tests
 
 ```bash
