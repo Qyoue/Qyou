@@ -78,4 +78,24 @@ describe('Auth routes', () => {
       assert.equal(response.status, 401);
     });
   });
+
+  describe('security headers (#801)', () => {
+    it('sends standard Helmet headers', async () => {
+      const response = await request(app).get('/health');
+
+      assert.equal(response.headers['x-content-type-options'], 'nosniff');
+      assert.ok(response.headers['x-dns-prefetch-control']);
+      assert.ok(response.headers['x-frame-options']);
+    });
+  });
+
+  describe('CORS allow-list (#800)', () => {
+    it('allows an origin from the configured allow-list', async () => {
+      const response = await request(app)
+        .get('/health')
+        .set('Origin', 'http://localhost:3000');
+
+      assert.ok(response.headers['access-control-allow-origin']);
+    });
+  });
 });

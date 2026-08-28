@@ -1,5 +1,7 @@
 import cors from 'cors';
+import helmet from 'helmet';
 import express, { type Express } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { createAuthRouter } from './modules/auth/routes/auth.routes.js';
 import { PrismaAuthRepository } from './modules/auth/repositories/auth.repository.js';
 import type { AuthRepository } from './modules/auth/repositories/auth.repository.js';
@@ -107,20 +109,42 @@ const openApiSpec = {
 export function createApp(deps: AppDependencies = {}): Express {
   const app = express();
 
-  // #839: CSRF strategy — auth uses Bearer tokens in Authorization headers
-  // (not cookies), so standard CSRF attacks do not apply. If cookie-based
-  // sessions are added in future, add a double-submit cookie or synchroniser
-  // token at that point. Document the decision here for reviewers.
-  app.use(cors());
+  // #801: standard security headers (HSTS, X-Content-Type-Options, etc.)
+  app.use(helmet());
+
+  // #800: CORS allow-list driven by CORS_ORIGINS env var.
+  app.use(
+    cors({
+      origin(origin, callback) {
+        if (!origin || env.CORS_ORIGINS.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+        if (env.NODE_ENV === 'production') {
+          callback(new Error('Origin not allowed by CORS policy.'));
+          return;
+        }
+        callback(null, true);
+      },
+    }),
+  );
   app.use(express.json());
+
+  // #799: rate-limit auth routes to mitigate brute-force attempts.
+  const authRateLimiter = rateLimit({
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    limit: env.RATE_LIMIT_MAX,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+  });
 
   const authRepository = deps.authRepository ?? new PrismaAuthRepository(prisma);
 
   // All API routes versioned under /api/v1 (#821)
-  app.use('/api/v1/auth', createAuthRouter(authRepository));
+  app.use('/api/v1/auth', authRateLimiter, createAuthRouter(authRepository));
 
   // Keep /api/auth as a redirect alias for backwards compatibility during migration
-  app.use('/api/auth', createAuthRouter(authRepository));
+  app.use('/api/auth', authRateLimiter, createAuthRouter(authRepository));
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
