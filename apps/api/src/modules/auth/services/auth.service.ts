@@ -37,6 +37,10 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password.');
     }
 
+    if (user.deactivatedAt) {
+      throw new UnauthorizedError('This account has been deactivated.');
+    }
+
     const isValidPassword = await bcrypt.compare(input.password, user.passwordHash);
     if (!isValidPassword) {
       this.failedAttempts.set(input.email, (this.failedAttempts.get(input.email) ?? 0) + 1);
@@ -45,6 +49,10 @@ export class AuthService {
 
     this.failedAttempts.delete(input.email);
     return this.toAuthResponse(user);
+  }
+
+  async deactivateAccount(id: string): Promise<void> {
+    await this.authRepository.deactivate(id);
   }
 
   private toAuthResponse(user: AuthUserRecord): AuthResponse {

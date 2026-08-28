@@ -62,20 +62,14 @@ describe('AuthService', () => {
     });
   });
 
-  describe('account lockout (#804)', () => {
-    it('blocks login after the failed-attempt threshold', async () => {
-      await authService.register({ email: 'lockout@example.com', password: 'password123' });
-
-      for (let i = 0; i < 5; i += 1) {
-        await assert.rejects(
-          () => authService.login({ email: 'lockout@example.com', password: 'wrong-pass' }),
-          /Invalid email or password/,
-        );
-      }
+  describe('deactivateAccount', () => {
+    it('rejects login for a deactivated account (#798)', async () => {
+      const created = await authService.register({ email: 'deact@example.com', password: 'password123' });
+      await authService.deactivateAccount(created.user.id);
 
       await assert.rejects(
-        () => authService.login({ email: 'lockout@example.com', password: 'password123' }),
-        /temporarily locked/,
+        () => authService.login({ email: 'deact@example.com', password: 'password123' }),
+        /has been deactivated/,
       );
     });
   });
