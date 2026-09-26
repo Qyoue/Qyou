@@ -40,3 +40,9 @@ export function sanitizeLogData(data: unknown): unknown {
 
   return data;
 }
+
+export const LogSanitizer = {
+  redact: redactStellarSecretKeys,
+  maskString: redactStellarSecretKeys,
+  sanitize: sanitizeLogData,
+};

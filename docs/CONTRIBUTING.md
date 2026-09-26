@@ -71,8 +71,16 @@ shared contracts here rather than duplicating them per app.
 
 ### `packages/stellar`
 
-A placeholder package for the future Stellar integration. Do not add blockchain logic here until
-that work is explicitly scoped.
+Holds the Stellar and Soroban integration services, smart contract bindings, wallet linking handlers, and queue incentive distribution mechanisms. See [`packages/stellar/CONTRIBUTING.md`](../packages/stellar/CONTRIBUTING.md) for blockchain-specific contribution policies.
+
+## Blockchain Key Hygiene & Development Defaults
+
+When contributing to `@qyou/stellar` or blockchain-adjacent API routes:
+
+* **Key Hygiene**: Never commit secret keys or seeds (StrKeys starting with `S...`) to the repository under any circumstances, even testnet keys. Load all keys via environment variables or secret managers.
+* **Testnet Defaults**: All local development and automated CI runs default to Stellar Testnet (`Test SDF Network ; September 2015`). Operations targeting Mainnet require explicit confirmation via `allowMainnet: true` through `NetworkGuard`.
+* **Log Sanitization**: Always pass cryptographic keys and transaction signatures through `LogSanitizer` before logging to prevent accidental leakages in debug output.
+* **Verification**: Prior to submitting a PR touching blockchain components, run `npm run test -w @qyou/stellar`, `npm run test:coverage -w @qyou/stellar`, and `npm run audit:crypto -w @qyou/stellar`.
 
 ## Development workflow
 
