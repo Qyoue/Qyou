@@ -8,6 +8,7 @@ import { DistributionKillSwitch } from '../security/kill-switch.js';
 import type { AccountTransactionWatcher } from '../security/transaction-watcher.js';
 import { UnauthorizedDistributionError } from '../errors/stellar-error.js';
 import { NetworkGuard } from '../security/network-guard.js';
+import { DistributionMetricsCollector } from '../analytics/metrics.js';
 
 export type RewardStatus = 'pending' | 'confirmed' | 'failed';
 
@@ -35,6 +36,7 @@ export interface IncentiveServiceOptions {
   readonly requireInternalTrigger?: boolean;
   readonly internalTriggerSecret?: string;
   readonly allowMainnet?: boolean;
+  readonly metrics?: DistributionMetricsCollector;
 }
 
 export class IncentiveService {
@@ -45,6 +47,7 @@ export class IncentiveService {
   private readonly _requireInternalTrigger: boolean;
   private readonly _internalTriggerSecret?: string;
   private readonly _allowMainnet?: boolean;
+  private readonly _metrics: DistributionMetricsCollector;
   private readonly _queueConfigs = new Map<string, QueueIncentiveConfig>();
   private readonly _rewards = new Map<string, RewardRecord>();
 
@@ -65,6 +68,7 @@ export class IncentiveService {
     this._requireInternalTrigger = options.requireInternalTrigger ?? false;
     this._internalTriggerSecret = options.internalTriggerSecret;
     this._allowMainnet = options.allowMainnet;
+    this._metrics = options.metrics || DistributionMetricsCollector.getInstance();
   }
 
   public getClient(): IncentivePoolClient {
@@ -77,6 +81,10 @@ export class IncentiveService {
 
   public getTransactionWatcher(): AccountTransactionWatcher | undefined {
     return this._transactionWatcher;
+  }
+
+  public getMetrics(): DistributionMetricsCollector {
+    return this._metrics;
   }
 
   /**
@@ -160,6 +168,9 @@ export class IncentiveService {
     };
     this._rewards.set(rewardId, record);
 
+    this._metrics.recordAttempt();
+    const startTime = Date.now();
+
     try {
       // Parse float amount string into integer stroops (e.g., 5.0000000 -> 50000000n)
       const numericAmount = parseFloat(config.rewardAmount);
@@ -183,10 +194,13 @@ export class IncentiveService {
       this._eligibilityService.recordClaim(userId, queueId);
       RewardNotifier.getInstance().notifyConfirmed(record);
 
+      this._metrics.recordSuccess(Date.now() - startTime);
+
       return record;
     } catch (err: unknown) {
       record.status = 'failed';
       record.error = err instanceof Error ? err.message : 'Unknown distribution failure';
+      this._metrics.recordFailure(record.error, Date.now() - startTime);
       throw err;
     }
   }
@@ -206,6 +220,9 @@ export class IncentiveService {
 
     NetworkGuard.requireTestnet('IncentiveService.retryReward', { allowMainnet: this._allowMainnet });
     this._killSwitch.assertNotHalted();
+
+    this._metrics.recordAttempt();
+    const startTime = Date.now();
 
     const numericAmount = parseFloat(record.amount);
     const stroopAmount = BigInt(Math.round(numericAmount * 10_000_000));
@@ -230,10 +247,13 @@ export class IncentiveService {
       this._eligibilityService.recordClaim(record.userId, record.queueId);
       RewardNotifier.getInstance().notifyConfirmed(record);
 
+      this._metrics.recordSuccess(Date.now() - startTime);
+
       return record;
     } catch (err: unknown) {
       record.status = 'failed';
       record.error = err instanceof Error ? err.message : 'Retry distribution failure';
+      this._metrics.recordFailure(record.error, Date.now() - startTime);
       throw err;
     }
   }
