@@ -6,6 +6,8 @@ import { createAuthRouter } from './modules/auth/routes/auth.routes.js';
 import { PrismaAuthRepository } from './modules/auth/repositories/auth.repository.js';
 import type { AuthRepository } from './modules/auth/repositories/auth.repository.js';
 import { InMemoryAuthRepository } from './modules/auth/repositories/in-memory-auth.repository.js';
+import { createStellarRouter } from './modules/stellar/routes/stellar.routes.js';
+import type { StellarRepository } from './modules/stellar/repositories/stellar.repository.js';
 import { prisma } from './shared/database/prisma.js';
 import { errorHandler } from './shared/middleware/error-handler.js';
 import { metricsMiddleware, renderMetrics } from './shared/middleware/metrics.js';
@@ -14,6 +16,8 @@ import { env } from './shared/config/env.js';
 
 export interface AppDependencies {
   authRepository?: AuthRepository;
+  stellarRepository?: StellarRepository;
+  stellarEnabled?: boolean;
 }
 
 /**
@@ -71,6 +75,65 @@ const openApiSpec = {
         summary: 'Log out (invalidate session)',
         tags: ['Auth'],
         responses: { 200: { description: 'Logged out' } },
+      },
+    },
+    '/stellar/wallet': {
+      post: {
+        summary: 'Link a Stellar public key to user account',
+        tags: ['Stellar'],
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['publicKey'],
+                properties: {
+                  publicKey: { type: 'string', pattern: '^G[A-Z2-7]{55}$' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Wallet linked successfully' },
+          400: { description: 'Invalid Stellar public key' },
+          409: { description: 'Wallet already linked' },
+        },
+      },
+      get: {
+        summary: 'Get linked Stellar wallet and cached balances',
+        tags: ['Stellar'],
+        security: [{ BearerAuth: [] }],
+        responses: {
+          200: { description: 'Wallet details with balances' },
+          404: { description: 'No wallet linked' },
+        },
+      },
+      delete: {
+        summary: 'Unlink a linked Stellar wallet with re-authentication',
+        tags: ['Stellar'],
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  password: { type: 'string' },
+                  reauthConfirmed: { type: 'boolean' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Wallet unlinked successfully' },
+          401: { description: 'Re-authentication required' },
+          404: { description: 'No wallet linked' },
+        },
       },
     },
   },
@@ -158,6 +221,20 @@ export function createApp(deps: AppDependencies = {}): Express {
 
   // Keep /api/auth as a redirect alias for backwards compatibility during migration
   app.use('/api/auth', authRateLimiter, createAuthRouter(authRepository));
+
+  // Feature flag check (#959 / Track 1 #11): gate Stellar routes behind STELLAR_INCENTIVES_ENABLED (#1006)
+  const stellarEnabled =
+    deps.stellarEnabled ??
+    (process.env.STELLAR_INCENTIVES_ENABLED === 'true' ||
+      process.env.STELLAR_INCENTIVES_ENABLED === '1');
+
+  if (stellarEnabled) {
+    const stellarRouter = createStellarRouter({
+      stellarRepository: deps.stellarRepository,
+    });
+    app.use('/api/v1/stellar', stellarRouter);
+    app.use('/api/stellar', stellarRouter);
+  }
 
   // #815: health check for uptime monitors/load balancers — probes DB connectivity.
   app.get('/health', async (_req, res) => {
