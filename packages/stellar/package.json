@@ -15,7 +15,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "node --import tsx --test tests/**/*.test.ts"
+    "test": "node --import tsx --test tests/**/*.test.ts",
+    "audit:crypto": "node --import tsx scripts/crypto-audit.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
