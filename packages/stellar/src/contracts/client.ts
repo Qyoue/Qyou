@@ -7,6 +7,7 @@ import {
   ContractUnauthorizedError,
   ContractInsufficientBalanceError,
 } from './incentive-pool.js';
+import { NetworkGuard, type NetworkType } from '../security/network-guard.js';
 
 export interface IncentivePoolClientConfig {
   readonly contractId: string;
@@ -14,6 +15,8 @@ export interface IncentivePoolClientConfig {
   readonly rpcUrl?: string;
   readonly adminSignerKey?: string;
   readonly contractInstance?: IncentivePoolContract;
+  readonly network?: NetworkType;
+  readonly allowMainnet?: boolean;
 }
 
 export interface DistributionResult {
@@ -46,6 +49,8 @@ export class IncentivePoolClient {
   public readonly rpcUrl: string;
   private readonly _adminSignerKey?: string;
   private readonly _contract: IncentivePoolContract;
+  private readonly _network?: NetworkType;
+  private readonly _allowMainnet?: boolean;
   private readonly _distributeTxHashes = new Map<string, string>();
 
   constructor(config: IncentivePoolClientConfig) {
@@ -57,6 +62,8 @@ export class IncentivePoolClient {
     this.networkPassphrase = config.networkPassphrase || 'Test SDF Network ; September 2015';
     this.rpcUrl = config.rpcUrl || 'https://soroban-testnet.stellar.org';
     this._adminSignerKey = config.adminSignerKey;
+    this._network = config.network;
+    this._allowMainnet = config.allowMainnet;
 
     // Use injected contract instance or initialize an internal simulator
     this._contract = config.contractInstance || new IncentivePoolContract();
@@ -99,6 +106,14 @@ export class IncentivePoolClient {
     idempotencyKey: string;
     caller?: string;
   }): Promise<DistributionResult> {
+    const effectiveNetwork: NetworkType =
+      this._network ||
+      (this.networkPassphrase.includes('Public Global') ? 'MAINNET' : 'TESTNET');
+    NetworkGuard.requireTestnet('IncentivePoolClient.distribute', {
+      network: effectiveNetwork,
+      allowMainnet: this._allowMainnet,
+    });
+
     const caller = params.caller || this._adminSignerKey;
     if (!caller) {
       throw new ContractUnauthorizedError('Admin caller address or adminSignerKey must be provided');

@@ -6,3 +6,5 @@ export * from './abuse-detector.js';
 export * from './kill-switch.js';
 export * from './transaction-watcher.js';
 export * from './wallet-challenge.service.js';
+export * from './network-guard.js';
+
