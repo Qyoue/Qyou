@@ -16,6 +16,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "node --import tsx --test tests/**/*.test.ts",
+    "test:contracts": "cargo test --manifest-path contracts/incentive_pool/Cargo.toml",
+    "test:integration": "node --import tsx --test tests/integration/**/*.test.ts",
     "audit:crypto": "node --import tsx scripts/crypto-audit.ts"
   },
   "devDependencies": {
