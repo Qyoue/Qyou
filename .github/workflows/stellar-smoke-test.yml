@@ -1,0 +1,44 @@
+name: Stellar Post-Deployment Smoke Test (#1072)
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Target environment to smoke test'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  smoke-test:
+    name: Run Stellar Integration Smoke Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build workspaces
+        run: |
+          npm run build -w @qyou/shared
+          npm run build -w @qyou/stellar
+
+      - name: Execute Automated Smoke Test Suite
+        env:
+          STELLAR_NETWORK: TESTNET
+          STELLAR_HORIZON_URL: https://horizon-testnet.stellar.org
+          STELLAR_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+        run: npm run smoke-test -w @qyou/stellar

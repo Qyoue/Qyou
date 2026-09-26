@@ -23,7 +23,8 @@
     "test:integration": "node --import tsx --test tests/integration/**/*.test.ts",
     "audit:crypto": "node --import tsx scripts/crypto-audit.ts",
     "example:wallet": "node --import tsx examples/create-wallet.ts",
-    "example:reward": "node --import tsx examples/send-test-reward.ts"
+    "example:reward": "node --import tsx examples/send-test-reward.ts",
+    "smoke-test": "node --import tsx scripts/post-deploy-smoke-test.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

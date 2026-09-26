@@ -9,6 +9,7 @@ import type { AccountTransactionWatcher } from '../security/transaction-watcher.
 import { UnauthorizedDistributionError } from '../errors/stellar-error.js';
 import { NetworkGuard } from '../security/network-guard.js';
 import { DistributionMetricsCollector } from '../analytics/metrics.js';
+import { TransactionFeeTracker } from '../analytics/fee-tracker.js';
 
 export type RewardStatus = 'pending' | 'confirmed' | 'failed';
 
@@ -47,11 +48,13 @@ export class IncentiveService {
   private readonly _requireInternalTrigger: boolean;
   private readonly _internalTriggerSecret?: string;
   private readonly _allowMainnet?: boolean;
+  private readonly _adminSignerKey?: string;
   private readonly _metrics: DistributionMetricsCollector;
   private readonly _queueConfigs = new Map<string, QueueIncentiveConfig>();
   private readonly _rewards = new Map<string, RewardRecord>();
 
   constructor(options: IncentiveServiceOptions = {}) {
+    this._adminSignerKey = options.adminSignerKey || process.env.STELLAR_DISTRIBUTION_SECRET_KEY;
     this._client =
       options.client ||
       new IncentivePoolClient({
@@ -59,7 +62,7 @@ export class IncentiveService {
           options.contractId ||
           process.env.STELLAR_INCENTIVE_POOL_CONTRACT_ID ||
           'CDEFAULTTESTNETCONTRACTID1234567890',
-        adminSignerKey: options.adminSignerKey || process.env.STELLAR_DISTRIBUTION_SECRET_KEY,
+        adminSignerKey: this._adminSignerKey,
         allowMainnet: options.allowMainnet,
       });
     this._eligibilityService = options.eligibilityService || new RewardEligibilityService();
@@ -191,6 +194,15 @@ export class IncentiveService {
         this._transactionWatcher.registerAuthorizedTransaction(txResult.txHash);
       }
 
+      if (txResult.txHash) {
+        TransactionFeeTracker.getInstance().recordFee({
+          txHash: txResult.txHash,
+          feeStroops: 100n,
+          account: this._adminSignerKey,
+          memo: idempotencyKey,
+        });
+      }
+
       this._eligibilityService.recordClaim(userId, queueId);
       RewardNotifier.getInstance().notifyConfirmed(record);
 
@@ -242,6 +254,15 @@ export class IncentiveService {
 
       if (txResult.txHash && this._transactionWatcher) {
         this._transactionWatcher.registerAuthorizedTransaction(txResult.txHash);
+      }
+
+      if (txResult.txHash) {
+        TransactionFeeTracker.getInstance().recordFee({
+          txHash: txResult.txHash,
+          feeStroops: 100n,
+          account: this._adminSignerKey,
+          memo: idempotencyKey,
+        });
       }
 
       this._eligibilityService.recordClaim(record.userId, record.queueId);
