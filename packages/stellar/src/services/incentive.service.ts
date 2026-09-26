@@ -6,6 +6,7 @@ import {
 import { RewardNotifier } from '../events/reward-notifier.js';
 import { DistributionKillSwitch } from '../security/kill-switch.js';
 import type { AccountTransactionWatcher } from '../security/transaction-watcher.js';
+import { UnauthorizedDistributionError } from '../errors/stellar-error.js';
 
 export type RewardStatus = 'pending' | 'confirmed' | 'failed';
 
@@ -30,6 +31,8 @@ export interface IncentiveServiceOptions {
   readonly eligibilityService?: RewardEligibilityService;
   readonly killSwitch?: DistributionKillSwitch;
   readonly transactionWatcher?: AccountTransactionWatcher;
+  readonly requireInternalTrigger?: boolean;
+  readonly internalTriggerSecret?: string;
 }
 
 export class IncentiveService {
@@ -37,6 +40,8 @@ export class IncentiveService {
   private readonly _eligibilityService: RewardEligibilityService;
   private readonly _killSwitch: DistributionKillSwitch;
   private readonly _transactionWatcher?: AccountTransactionWatcher;
+  private readonly _requireInternalTrigger: boolean;
+  private readonly _internalTriggerSecret?: string;
   private readonly _queueConfigs = new Map<string, QueueIncentiveConfig>();
   private readonly _rewards = new Map<string, RewardRecord>();
 
@@ -53,6 +58,8 @@ export class IncentiveService {
     this._eligibilityService = options.eligibilityService || new RewardEligibilityService();
     this._killSwitch = options.killSwitch || DistributionKillSwitch.getInstance();
     this._transactionWatcher = options.transactionWatcher;
+    this._requireInternalTrigger = options.requireInternalTrigger ?? false;
+    this._internalTriggerSecret = options.internalTriggerSecret;
   }
 
   public getClient(): IncentivePoolClient {
@@ -90,9 +97,27 @@ export class IncentiveService {
     queueId: string;
     recipient: string;
     idempotencyKey?: string;
+    callerContext?: {
+      role?: string;
+      isInternalTrigger?: boolean;
+      internalSecret?: string;
+    };
   }): Promise<RewardRecord> {
     // 1. Emergency kill switch check (#1030)
     this._killSwitch.assertNotHalted();
+
+    // 2. Application-level access control: internal queue-completion trigger verification (#1034)
+    if (this._requireInternalTrigger) {
+      const isInternal =
+        params.callerContext?.isInternalTrigger === true ||
+        params.callerContext?.role === 'internal_queue_worker' ||
+        (Boolean(this._internalTriggerSecret) &&
+          params.callerContext?.internalSecret === this._internalTriggerSecret);
+
+      if (!isInternal) {
+        throw new UnauthorizedDistributionError();
+      }
+    }
 
     const { userId, queueId, recipient } = params;
     const config = this.getQueueConfig(queueId);

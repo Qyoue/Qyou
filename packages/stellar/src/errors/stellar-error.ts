@@ -27,7 +27,16 @@ export class WalletNotFoundError extends StellarError {
 }
 
 export class UnauthorizedStellarOperationError extends StellarError {
-  constructor(message = 'Unauthorized Stellar operation') {
-    super(message, 'UNAUTHORIZED_STELLAR_OPERATION');
+  constructor(message = 'Unauthorized Stellar operation', code = 'UNAUTHORIZED_STELLAR_OPERATION') {
+    super(message, code);
+  }
+}
+
+export class UnauthorizedDistributionError extends UnauthorizedStellarOperationError {
+  constructor(
+    message = 'Unauthorized distribution trigger: distributions can only be triggered by the internal queue-completion service (#1034)',
+    code = 'UNAUTHORIZED_DISTRIBUTION_TRIGGER'
+  ) {
+    super(message, code);
   }
 }
