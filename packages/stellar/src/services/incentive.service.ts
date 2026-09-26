@@ -183,6 +183,52 @@ export class IncentiveService {
     }
   }
 
+  /**
+   * Retries a previously failed reward distribution (#1039).
+   */
+  public async retryReward(rewardId: string): Promise<RewardRecord> {
+    const record = this._rewards.get(rewardId);
+    if (!record) {
+      throw new Error(`Reward record not found: ${rewardId}`);
+    }
+
+    if (record.status === 'confirmed') {
+      return record;
+    }
+
+    this._killSwitch.assertNotHalted();
+
+    const numericAmount = parseFloat(record.amount);
+    const stroopAmount = BigInt(Math.round(numericAmount * 10_000_000));
+    const idempotencyKey = `qreward:${record.userId}:${record.queueId}:retry:${Date.now()}`;
+
+    try {
+      const txResult = await this._client.distribute({
+        recipient: record.recipient,
+        amount: stroopAmount,
+        idempotencyKey,
+      });
+
+      record.status = 'confirmed';
+      record.transactionHash = txResult.txHash;
+      record.confirmedAt = Date.now();
+      record.error = undefined;
+
+      if (txResult.txHash && this._transactionWatcher) {
+        this._transactionWatcher.registerAuthorizedTransaction(txResult.txHash);
+      }
+
+      this._eligibilityService.recordClaim(record.userId, record.queueId);
+      RewardNotifier.getInstance().notifyConfirmed(record);
+
+      return record;
+    } catch (err: unknown) {
+      record.status = 'failed';
+      record.error = err instanceof Error ? err.message : 'Retry distribution failure';
+      throw err;
+    }
+  }
+
   public async getPoolBalance(): Promise<bigint> {
     return this._client.getBalance();
   }

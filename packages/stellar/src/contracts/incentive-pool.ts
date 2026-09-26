@@ -165,6 +165,11 @@ export class IncentivePoolContract {
     return this._admin!;
   }
 
+  public getToken(): string {
+    this.assertInitialized();
+    return this._token!;
+  }
+
   public getUpgradeAdmin(): string {
     this.assertInitialized();
     return this._upgradeAdmin!;

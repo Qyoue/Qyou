@@ -1,7 +1,7 @@
 #![no_std]
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env,
-    String, Symbol,
+    String,
 };
 
 #[contracterror]
@@ -143,3 +143,6 @@ impl IncentivePoolContract {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test;

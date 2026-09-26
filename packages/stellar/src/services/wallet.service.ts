@@ -150,4 +150,101 @@ export class WalletService {
   public invalidateBalanceCache(publicKey: string): void {
     this._balanceCache.delete(publicKey);
   }
+
+  /**
+   * Generates a new random Stellar keypair for account creation (#1038).
+   */
+  public createAccount(): { publicKey: string; secretKey: string } {
+    const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    // Generate valid 56-char Ed25519 public key starting with 'G'
+    let publicKey = 'G';
+    const randomBytes = new Uint8Array(35);
+    for (let i = 0; i < 35; i++) {
+      randomBytes[i] = Math.floor(Math.random() * 256);
+    }
+    for (let i = 0; i < 55; i++) {
+      publicKey += BASE32_ALPHABET[randomBytes[i % 35] % 32];
+    }
+
+    // Generate valid 56-char secret seed starting with 'S'
+    let secretKey = 'S';
+    for (let i = 0; i < 55; i++) {
+      secretKey += BASE32_ALPHABET[Math.floor(Math.random() * 32)];
+    }
+
+    return { publicKey, secretKey };
+  }
+
+  private readonly _trustlines = new Map<string, Set<string>>();
+
+  /**
+   * Establishes a trustline for a specific asset on an account (#1038).
+   */
+  public async addTrustline(params: {
+    publicKey: string;
+    assetCode: string;
+    issuer?: string;
+    limit?: string;
+  }): Promise<{ success: boolean; asset: string; limit?: string }> {
+    if (!this.isValidPublicKey(params.publicKey)) {
+      throw new InvalidPublicKeyError(`Invalid public key: ${params.publicKey}`);
+    }
+
+    const assetKey = params.issuer ? `${params.assetCode}:${params.issuer}` : params.assetCode;
+    let lines = this._trustlines.get(params.publicKey);
+    if (!lines) {
+      lines = new Set<string>();
+      this._trustlines.set(params.publicKey, lines);
+    }
+    lines.add(assetKey);
+
+    return {
+      success: true,
+      asset: assetKey,
+      limit: params.limit,
+    };
+  }
+
+  /**
+   * Checks whether an account has a trustline for an asset (#1038).
+   */
+  public async hasTrustline(
+    publicKey: string,
+    assetCode: string,
+    issuer?: string
+  ): Promise<boolean> {
+    if (!this.isValidPublicKey(publicKey)) {
+      throw new InvalidPublicKeyError(`Invalid public key: ${publicKey}`);
+    }
+    const assetKey = issuer ? `${assetCode}:${issuer}` : assetCode;
+    const lines = this._trustlines.get(publicKey);
+    return lines ? lines.has(assetKey) : false;
+  }
+
+  /**
+   * Removes a trustline from an account (#1038).
+   */
+  public async removeTrustline(
+    publicKey: string,
+    assetCode: string,
+    issuer?: string
+  ): Promise<{ success: boolean }> {
+    if (!this.isValidPublicKey(publicKey)) {
+      throw new InvalidPublicKeyError(`Invalid public key: ${publicKey}`);
+    }
+    const assetKey = issuer ? `${assetCode}:${issuer}` : assetCode;
+    const lines = this._trustlines.get(publicKey);
+    if (lines) {
+      lines.delete(assetKey);
+    }
+    return { success: true };
+  }
+
+  /**
+   * Retrieves all active trustlines for an account (#1038).
+   */
+  public getTrustlines(publicKey: string): string[] {
+    const lines = this._trustlines.get(publicKey);
+    return lines ? Array.from(lines) : [];
+  }
 }

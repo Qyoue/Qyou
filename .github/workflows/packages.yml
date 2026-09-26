@@ -33,3 +33,46 @@ jobs:
 
       - name: Lint
         run: npm run lint -w ${{ matrix.package }}
+
+      - name: Test
+        run: npm run test -w ${{ matrix.package }} --if-present
+
+  stellar-contracts:
+    name: Soroban Smart Contract Tests (#1041)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Run Soroban Rust Contract Tests
+        run: cargo test --manifest-path packages/stellar/contracts/incentive_pool/Cargo.toml
+
+  stellar-quickstart-integration:
+    name: Stellar Quickstart Testnet Integration (#1040)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      stellar-quickstart:
+        image: stellar/quickstart:testing
+        ports:
+          - 8000:8000
+        options: >-
+          --name stellar-quickstart
+          --local
+          --enable-soroban-rpc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @qyou/shared -w @qyou/stellar
+      - name: Run Stellar Quickstart Integration Tests
+        env:
+          STELLAR_NETWORK_URL: http://localhost:8000
+          STELLAR_RPC_URL: http://localhost:8000/soroban/rpc
+          STELLAR_PASSPHRASE: "Standalone Network ; February 2017"
+        run: npm run test:integration -w @qyou/stellar
