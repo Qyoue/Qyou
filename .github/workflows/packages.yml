@@ -37,6 +37,33 @@ jobs:
       - name: Test
         run: npm run test -w ${{ matrix.package }} --if-present
 
+  stellar-package-ci:
+    name: Stellar Package Rigorous CI (#1042)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build dependencies
+        run: npm run build -w @qyou/shared -w @qyou/stellar
+      - name: Lint Stellar package
+        run: npm run lint -w @qyou/stellar
+      - name: Run Stellar unit tests
+        run: npm run test -w @qyou/stellar
+      - name: Enforce Coverage Threshold (#1045)
+        run: npm run test:coverage -w @qyou/stellar
+      - name: Run Mutation Testing & Property Rigor (#1043)
+        run: npm run test:mutation -w @qyou/stellar
+      - name: Run Concurrency & Load Performance Tests (#1044)
+        run: npm run test:load -w @qyou/stellar
+      - name: Run Crypto Dependency Vulnerability Audit
+        run: npm run audit:crypto -w @qyou/stellar
+
   stellar-contracts:
     name: Soroban Smart Contract Tests (#1041)
     runs-on: ubuntu-latest

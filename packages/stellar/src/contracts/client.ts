@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {
   IncentivePoolContract,
   IncentivePoolConfig,
@@ -45,6 +46,7 @@ export class IncentivePoolClient {
   public readonly rpcUrl: string;
   private readonly _adminSignerKey?: string;
   private readonly _contract: IncentivePoolContract;
+  private readonly _distributeTxHashes = new Map<string, string>();
 
   constructor(config: IncentivePoolClientConfig) {
     if (!config.contractId || config.contractId.trim().length === 0) {
@@ -109,7 +111,11 @@ export class IncentivePoolClient {
       idempotencyKey: params.idempotencyKey,
     });
 
-    const txHash = this.generateSimulatedTxHash('distrib', params.idempotencyKey);
+    let txHash = this._distributeTxHashes.get(params.idempotencyKey);
+    if (!txHash) {
+      txHash = this.generateSimulatedTxHash('distrib', params.idempotencyKey);
+      this._distributeTxHashes.set(params.idempotencyKey, txHash);
+    }
 
     return {
       success: true,
@@ -153,7 +159,7 @@ export class IncentivePoolClient {
   }
 
   private generateSimulatedTxHash(prefix: string, seed: string): string {
-    const raw = `${prefix}-${this.contractId}-${seed}-${Date.now()}`;
-    return Buffer.from(raw).toString('hex').slice(0, 64);
+    const raw = `${prefix}-${this.contractId}-${seed}-${Date.now()}-${Math.random()}`;
+    return crypto.createHash('sha256').update(raw).digest('hex');
   }
 }
