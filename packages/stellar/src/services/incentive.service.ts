@@ -7,6 +7,7 @@ import { RewardNotifier } from '../events/reward-notifier.js';
 import { DistributionKillSwitch } from '../security/kill-switch.js';
 import type { AccountTransactionWatcher } from '../security/transaction-watcher.js';
 import { UnauthorizedDistributionError } from '../errors/stellar-error.js';
+import { NetworkGuard } from '../security/network-guard.js';
 
 export type RewardStatus = 'pending' | 'confirmed' | 'failed';
 
@@ -33,6 +34,7 @@ export interface IncentiveServiceOptions {
   readonly transactionWatcher?: AccountTransactionWatcher;
   readonly requireInternalTrigger?: boolean;
   readonly internalTriggerSecret?: string;
+  readonly allowMainnet?: boolean;
 }
 
 export class IncentiveService {
@@ -42,6 +44,7 @@ export class IncentiveService {
   private readonly _transactionWatcher?: AccountTransactionWatcher;
   private readonly _requireInternalTrigger: boolean;
   private readonly _internalTriggerSecret?: string;
+  private readonly _allowMainnet?: boolean;
   private readonly _queueConfigs = new Map<string, QueueIncentiveConfig>();
   private readonly _rewards = new Map<string, RewardRecord>();
 
@@ -54,12 +57,14 @@ export class IncentiveService {
           process.env.STELLAR_INCENTIVE_POOL_CONTRACT_ID ||
           'CDEFAULTTESTNETCONTRACTID1234567890',
         adminSignerKey: options.adminSignerKey || process.env.STELLAR_DISTRIBUTION_SECRET_KEY,
+        allowMainnet: options.allowMainnet,
       });
     this._eligibilityService = options.eligibilityService || new RewardEligibilityService();
     this._killSwitch = options.killSwitch || DistributionKillSwitch.getInstance();
     this._transactionWatcher = options.transactionWatcher;
     this._requireInternalTrigger = options.requireInternalTrigger ?? false;
     this._internalTriggerSecret = options.internalTriggerSecret;
+    this._allowMainnet = options.allowMainnet;
   }
 
   public getClient(): IncentivePoolClient {
@@ -103,6 +108,9 @@ export class IncentiveService {
       internalSecret?: string;
     };
   }): Promise<RewardRecord> {
+    // 0. Network configuration guard (#1049)
+    NetworkGuard.requireTestnet('IncentiveService.reward', { allowMainnet: this._allowMainnet });
+
     // 1. Emergency kill switch check (#1030)
     this._killSwitch.assertNotHalted();
 
@@ -196,6 +204,7 @@ export class IncentiveService {
       return record;
     }
 
+    NetworkGuard.requireTestnet('IncentiveService.retryReward', { allowMainnet: this._allowMainnet });
     this._killSwitch.assertNotHalted();
 
     const numericAmount = parseFloat(record.amount);
@@ -227,6 +236,71 @@ export class IncentiveService {
       record.error = err instanceof Error ? err.message : 'Retry distribution failure';
       throw err;
     }
+  }
+
+  /**
+   * Attempts reward distribution with automated retry and backoff on transient errors (#1048).
+   * Ensures in-flight distributions degrade gracefully without silently losing payout state.
+   */
+  public async rewardWithRetry(
+    params: {
+      userId: string;
+      queueId: string;
+      recipient: string;
+      idempotencyKey?: string;
+      callerContext?: {
+        role?: string;
+        isInternalTrigger?: boolean;
+        internalSecret?: string;
+      };
+    },
+    retryConfig: {
+      maxAttempts?: number;
+      initialDelayMs?: number;
+      backoffFactor?: number;
+    } = {}
+  ): Promise<RewardRecord> {
+    const maxAttempts = retryConfig.maxAttempts ?? 3;
+    const initialDelayMs = retryConfig.initialDelayMs ?? 15;
+    const backoffFactor = retryConfig.backoffFactor ?? 2;
+
+    let attempt = 1;
+    let createdRecordId: string | null = null;
+
+    while (attempt <= maxAttempts) {
+      try {
+        if (!createdRecordId) {
+          const record = await this.reward(params);
+          return record;
+        } else {
+          const record = await this.retryReward(createdRecordId);
+          return record;
+        }
+      } catch (err: unknown) {
+        // Locate in-flight record if it was stored
+        if (!createdRecordId) {
+          const matching = Array.from(this._rewards.values()).find(
+            (r) =>
+              r.userId === params.userId &&
+              r.queueId === params.queueId &&
+              r.recipient === params.recipient
+          );
+          if (matching) {
+            createdRecordId = matching.id;
+          }
+        }
+
+        if (attempt >= maxAttempts) {
+          throw err;
+        }
+
+        const delay = initialDelayMs * Math.pow(backoffFactor, attempt - 1);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        attempt++;
+      }
+    }
+
+    throw new Error('Reward distribution exceeded maximum retry attempts');
   }
 
   public async getPoolBalance(): Promise<bigint> {

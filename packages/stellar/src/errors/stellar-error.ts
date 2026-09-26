@@ -40,3 +40,13 @@ export class UnauthorizedDistributionError extends UnauthorizedStellarOperationE
     super(message, code);
   }
 }
+
+export class MainnetNotAllowedError extends StellarError {
+  constructor(
+    message = 'Mainnet operations are blocked without explicit opt-in confirmation (#1049)',
+    code = 'MAINNET_NOT_ALLOWED'
+  ) {
+    super(message, code);
+  }
+}
+
