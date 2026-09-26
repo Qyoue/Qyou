@@ -4,6 +4,8 @@ import {
   type QueueIncentiveConfig,
 } from '../eligibility/reward-eligibility.service.js';
 import { RewardNotifier } from '../events/reward-notifier.js';
+import { DistributionKillSwitch } from '../security/kill-switch.js';
+import type { AccountTransactionWatcher } from '../security/transaction-watcher.js';
 
 export type RewardStatus = 'pending' | 'confirmed' | 'failed';
 
@@ -26,11 +28,15 @@ export interface IncentiveServiceOptions {
   readonly contractId?: string;
   readonly adminSignerKey?: string;
   readonly eligibilityService?: RewardEligibilityService;
+  readonly killSwitch?: DistributionKillSwitch;
+  readonly transactionWatcher?: AccountTransactionWatcher;
 }
 
 export class IncentiveService {
   private readonly _client: IncentivePoolClient;
   private readonly _eligibilityService: RewardEligibilityService;
+  private readonly _killSwitch: DistributionKillSwitch;
+  private readonly _transactionWatcher?: AccountTransactionWatcher;
   private readonly _queueConfigs = new Map<string, QueueIncentiveConfig>();
   private readonly _rewards = new Map<string, RewardRecord>();
 
@@ -45,10 +51,20 @@ export class IncentiveService {
         adminSignerKey: options.adminSignerKey || process.env.STELLAR_DISTRIBUTION_SECRET_KEY,
       });
     this._eligibilityService = options.eligibilityService || new RewardEligibilityService();
+    this._killSwitch = options.killSwitch || DistributionKillSwitch.getInstance();
+    this._transactionWatcher = options.transactionWatcher;
   }
 
   public getClient(): IncentivePoolClient {
     return this._client;
+  }
+
+  public getKillSwitch(): DistributionKillSwitch {
+    return this._killSwitch;
+  }
+
+  public getTransactionWatcher(): AccountTransactionWatcher | undefined {
+    return this._transactionWatcher;
   }
 
   /**
@@ -67,6 +83,7 @@ export class IncentiveService {
 
   /**
    * Distributes a reward to an eligible queue participant based on the queue's specific config. (#1017)
+   * Enforces emergency kill switch check prior to any distribution (#1030).
    */
   public async reward(params: {
     userId: string;
@@ -74,6 +91,9 @@ export class IncentiveService {
     recipient: string;
     idempotencyKey?: string;
   }): Promise<RewardRecord> {
+    // 1. Emergency kill switch check (#1030)
+    this._killSwitch.assertNotHalted();
+
     const { userId, queueId, recipient } = params;
     const config = this.getQueueConfig(queueId);
 
@@ -121,6 +141,12 @@ export class IncentiveService {
       record.status = 'confirmed';
       record.transactionHash = txResult.txHash;
       record.confirmedAt = Date.now();
+
+      // Register authorized outgoing transaction with transaction watcher (#1031)
+      if (txResult.txHash && this._transactionWatcher) {
+        this._transactionWatcher.registerAuthorizedTransaction(txResult.txHash);
+      }
+
       this._eligibilityService.recordClaim(userId, queueId);
       RewardNotifier.getInstance().notifyConfirmed(record);
 
