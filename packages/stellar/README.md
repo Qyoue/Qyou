@@ -96,3 +96,35 @@ npm run test:load -w @qyou/stellar
 # Run Soroban Rust contract unit tests
 cargo test --manifest-path packages/stellar/contracts/incentive_pool/Cargo.toml
 ```
+
+# Qyou Stellar Package (`packages/stellar`)
+
+**Version:** 0.1.0  
+**Status:** Active Development / Alpha  
+**Scope:** Core Stellar smart contract integrations, Soroban bindings, and cryptographic transaction builders for the Qyou ecosystem.
+
+---
+
+## 1. Overview & Purpose
+The `packages/stellar` package provides TypeScript and Rust integration layers for interacting with the Stellar network and Soroban smart contracts within the Qyou architecture. It encapsulates account management, transaction signing, Soroban contract invocation helpers, and RPC client wrappers into a modular, testable library.
+
+---
+
+## 2. Current Implementation Status
+* **Soroban Contract Bindings:** Initial TypeScript interfaces and invocation wrappers for asset escrow, budget allocation, and spending contracts.
+* **RPC & Horizon Integration:** Robust transport layers connecting to Stellar Testnet and Mainnet RPC endpoints with automatic retry logic and error normalization.
+* **Key Management & Signing:** Secure local keypair generation, transaction fee bumping, and XDR serialization utilities.
+
+---
+
+## 3. Network Configuration
+The package supports dynamic network switching via environment variables or explicit client configuration:
+* **Testnet (Default):** Connected to Stellar Futurenet/Testnet RPC (`https://soroban-testnet.stellar.org`).
+* **Mainnet:** Production-grade configuration for mainnet deployment (`https://soroban.stellar.org`).
+* **Local Sandbox:** Standalone Soroban RPC instance running locally on `http://localhost:8000`.
+
+---
+
+## 4. Relationship to `apps/api`
+* **Dependency Direction:** `apps/api` consumes `packages/stellar` as a local workspace dependency to execute on-chain verifications, build transactions, and query Soroban smart contract state.
+* **Separation of Concerns:** `packages/stellar` contains zero HTTP routing or Express/FastAPI logic; it strictly handles Stellar protocol interactions, leaving API orchestration and business logic to `apps/api`.
