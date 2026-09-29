@@ -1,3 +1,11 @@
+// #824: HTTP status code mapping for each error subclass:
+// | Class              | statusCode | code              |
+// |--------------------|-----------|-------------------|
+// | ValidationError    |    400    | VALIDATION_ERROR  |
+// | UnauthorizedError  |    401    | UNAUTHORIZED      |
+// | NotFoundError      |    404    | NOT_FOUND         |
+// | ConflictError      |    409    | CONFLICT          |
+// | AppError (base)    | varies    | varies            |
 export class AppError extends Error {
   constructor(
     public readonly statusCode: number,

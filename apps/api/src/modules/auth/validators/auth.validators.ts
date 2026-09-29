@@ -1,15 +1,3 @@
-export {
-  loginSchema,
-  registerSchema,
-  passwordSafetySchema,
-  accountSafetySchema,
-  schemaEvolutionSchema,
-} from '@qyou/shared';
-export type {
-  LoginInput,
-  RegisterInput,
-  PasswordSafetyInput,
-  AccountSafetyInput,
-  SchemaEvolutionInput,
-} from '@qyou/shared';
+export { loginSchema, registerSchema } from '@qyou/shared';
+export type { LoginInput, RegisterInput } from '@qyou/shared';
 

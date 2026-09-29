@@ -128,6 +128,22 @@ npm run dev -w @qyou/mobile
 
 ---
 
+## Operations
+
+The API exposes the following endpoints for uptime monitoring and observability:
+
+* `GET /health` — liveness/readiness probe. Returns `{ status: "ok", db: "up" }` when the database
+  is reachable, or HTTP `503` with `{ status: "degraded", db: "down" }` when it is not. Point uptime
+  monitors and load-balancer health checks at this endpoint.
+* `GET /metrics` — exposes basic request metrics (request counts and cumulative request duration)
+  in Prometheus text format (`text/plain; version=0.0.4`) for scraping by an observability backend.
+
+Every request is assigned a correlation id (the value of the incoming `X-Request-Id` header or a
+generated UUID) that is echoed in the `X-Request-Id` response header and included in all log lines
+(`[req:<id>]`) emitted for that request.
+
+---
+
 ## Running Tests
 
 ```bash
@@ -160,6 +176,25 @@ npm run build      # Build every workspace
 * [`docs/SETUP.md`](docs/SETUP.md) — environment variables, local configuration, secrets handling
 * [`docs/TESTING.md`](docs/TESTING.md) — test execution, structure, and CI expectations
 * [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — coding standards, project structure, workflow
+
+---
+
+## Security
+
+### Auth token storage & CSRF strategy (#805)
+
+The API authenticates with **Bearer tokens sent in the `Authorization` header**, not cookies.
+Because the browser does not automatically attach these tokens to cross-site requests, the standard
+CSRF attack vector (session cookie riding along on a forged request) does **not** apply.
+
+Consequently **no CSRF-protection middleware is currently required**. If a future change stores the
+token in an `HttpOnly` cookie instead, a double-submit-cookie or synchroniser-token (CSRF) strategy
+must be added at that point.
+
+### bcrypt cost factor (#803)
+
+Password hashing uses `bcryptjs` with a cost factor configurable via the `BCRYPT_SALT_ROUNDS`
+environment variable (default `12`, enforced minimum `12`). See `apps/api/.env.example`.
 
 ---
 

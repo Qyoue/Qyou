@@ -61,4 +61,16 @@ describe('AuthService', () => {
       );
     });
   });
+
+  describe('deactivateAccount', () => {
+    it('rejects login for a deactivated account (#798)', async () => {
+      const created = await authService.register({ email: 'deact@example.com', password: 'password123' });
+      await authService.deactivateAccount(created.user.id);
+
+      await assert.rejects(
+        () => authService.login({ email: 'deact@example.com', password: 'password123' }),
+        /has been deactivated/,
+      );
+    });
+  });
 });

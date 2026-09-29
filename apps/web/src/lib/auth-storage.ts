@@ -4,6 +4,11 @@ import {
   type PersistenceValidationResult,
 } from '@qyou/shared';
 
+// #837: Token storage audit — auth state (access token) is stored in
+// localStorage under STORAGE_KEY. This is readable by any JS running on
+// the page (XSS risk). Accepted trade-off for the current SPA architecture.
+// If a refresh-token flow is added, store the refresh token in an httpOnly
+// cookie instead; the access token can remain in memory only (not localStorage).
 const STORAGE_KEY = 'qyou.web_auth_v2';
 
 export function saveAuthState(state: PersistedAuthState): void {

@@ -5,7 +5,10 @@ export const registerSchema = z.object({
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters.')
-    .max(72, 'Password must be at most 72 characters.'),
+    .max(72, 'Password must be at most 72 characters.')
+    // #829: actionable complexity messages safe to display to end users
+    .refine((p) => /[A-Z]/.test(p), 'Password must contain at least one uppercase letter.')
+    .refine((p) => /[0-9]/.test(p), 'Password must contain at least one number.'),
 });
 
 export const loginSchema = z.object({

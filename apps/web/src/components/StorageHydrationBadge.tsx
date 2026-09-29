@@ -1,5 +1,10 @@
 import React from 'react';
 
+// #840: dev/debug only — excluded from production builds
+if (process.env.NODE_ENV === 'production') {
+  throw new Error('StorageHydrationBadge must not be imported in production builds.');
+}
+
 interface StorageHydrationBadgeProps {
   status?: 'uninitialized' | 'hydrating' | 'hydrated' | 'error';
   hasSession?: boolean;

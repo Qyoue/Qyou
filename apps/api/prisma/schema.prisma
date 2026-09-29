@@ -8,11 +8,28 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String    @id @default(uuid())
+  email          String    @unique
+  passwordHash   String
+  deactivatedAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  walletLinks WalletLink[]
 
   @@map("users")
+}
+
+model WalletLink {
+  id                String    @id @default(uuid())
+  sessionId         String    @unique
+  userId            String
+  publicKey         String    @unique
+  network           String    @default("TESTNET")
+  encryptedSecretKey String?   // custodial-only; remains null for non-custodial wallets
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("wallet_links")
 }

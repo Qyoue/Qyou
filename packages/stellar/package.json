@@ -1,1 +1,32 @@
-{\n  "dependencies": {\n    "@stellar/stellar-sdk": "^12.0.0"\n  }\n}\n
+{
+  "name": "@qyou/stellar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "node --import tsx --test tests/**/*.test.ts",
+    "test:coverage": "node --import tsx scripts/check-coverage.ts",
+    "test:mutation": "node --import tsx scripts/mutation-test.ts",
+    "test:load": "node --import tsx --test tests/performance/**/*.test.ts",
+    "test:contracts": "cargo test --manifest-path contracts/incentive_pool/Cargo.toml",
+    "test:integration": "node --import tsx --test tests/integration/**/*.test.ts",
+    "audit:crypto": "node --import tsx scripts/crypto-audit.ts",
+    "example:wallet": "node --import tsx examples/create-wallet.ts",
+    "example:reward": "node --import tsx examples/send-test-reward.ts",
+    "smoke-test": "node --import tsx scripts/post-deploy-smoke-test.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
