@@ -26,7 +26,9 @@ export function AuthForm({
       <form className="auth-form" onSubmit={onSubmit} noValidate>
         <h1>{title}</h1>
         {children}
-        <FormError message={error} />
+        <div aria-live="assertive">
+          <FormError message={error} />
+        </div>
         <Button type="submit" loading={loading}>
           {submitLabel}
         </Button>

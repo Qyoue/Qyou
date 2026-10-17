@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  staging-postgres:
+    image: postgres:16-alpine
+    container_name: qyou-staging-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qyou_staging_user
+      POSTGRES_PASSWORD: secure_staging_password
+      POSTGRES_DB: qyou_staging
+    ports:
+      - "5432:5432"
+    volumes:
+      - staging_pgdata:/var/lib/postgresql/data
+
+  staging-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: qyou-staging-api
+    restart: unless-stopped
+    depends_on:
+      - staging-postgres
+    environment:
+      PORT: 4000
+      NODE_ENV: staging
+      DATABASE_URL: postgresql://qyou_staging_user:secure_staging_password@staging-postgres:5432/qyou_staging?schema=public
+      JWT_SECRET: staging-super-secret-jwt-signing-key-minimum-32-chars-length
+      JWT_EXPIRES_IN: 1h
+      BCRYPT_SALT_ROUNDS: 12
+      ENABLE_STELLAR_INTEGRATION: "true"
+      STELLAR_NETWORK: "TESTNET"
+      STELLAR_NETWORK_PASSPHRASE: "Test SDF Network ; September 2015"
+      STELLAR_HORIZON_URL: "https://horizon-testnet.stellar.org"
+      STELLAR_SOROBAN_RPC_URL: "https://soroban-testnet.stellar.org"
+      STELLAR_DISTRIBUTION_PUBLIC_KEY: ${STELLAR_DISTRIBUTION_PUBLIC_KEY:-GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFTGOBDKR3GYWUM7AZTQU}
+      STELLAR_DISTRIBUTION_SECRET_KEY: ${STELLAR_DISTRIBUTION_SECRET_KEY}
+      STELLAR_INCENTIVE_POOL_CONTRACT_ID: ${STELLAR_INCENTIVE_POOL_CONTRACT_ID:-CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA}
+    ports:
+      - "4000:4000"
+
+  staging-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: qyou-staging-web
+    restart: unless-stopped
+    depends_on:
+      - staging-api
+    environment:
+      NEXT_PUBLIC_API_URL: http://staging-api:4000
+      NEXT_PUBLIC_STELLAR_NETWORK: "TESTNET"
+      NEXT_PUBLIC_STELLAR_HORIZON_URL: "https://horizon-testnet.stellar.org"
+      NEXT_PUBLIC_STELLAR_EXPLORER_URL: "https://stellar.expert/explorer/testnet"
+    ports:
+      - "3000:3000"
+
+volumes:
+  staging_pgdata:

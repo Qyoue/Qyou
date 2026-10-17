@@ -1,0 +1,358 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Qyou API",
+    "version": "1.0.0",
+    "description": "REST API documentation for Qyou virtual queue management and Stellar blockchain incentive integration."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
+    },
+    {
+      "url": "https://api-testnet.qyou.app",
+      "description": "Staging / Testnet Environment"
+    }
+  ],
+  "paths": {
+    "/api/stellar/wallet": {
+      "post": {
+        "summary": "Link a Stellar Wallet to User Account",
+        "description": "Binds a 56-character Ed25519 Stellar public key (starts with G) to the authenticated user account (#1007, #1055).",
+        "tags": ["Stellar"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkWalletRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stellar wallet successfully linked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Stellar public key format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Wallet already linked or public key already registered to another user (anti-farming)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Linked Stellar Wallet & Balances",
+        "description": "Retrieves the authenticated user's linked Stellar public key, creation timestamp, and cached XLM/token balances (#1008, #1055).",
+        "tags": ["Stellar"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Linked wallet details and balances",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No linked Stellar wallet found for user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Unlink Stellar Wallet",
+        "description": "Unlinks the user's Stellar wallet. Enforces re-authentication confirmation or password verification for security (#1009, #1055).",
+        "tags": ["Stellar"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlinkWalletRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stellar wallet unlinked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnlinkWalletResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Re-authentication required: missing password or reauth confirmation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No linked Stellar wallet found to unlink",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stellar/wallet": {
+      "post": {
+        "$ref": "#/paths/~1api~1stellar~1wallet/post"
+      },
+      "get": {
+        "$ref": "#/paths/~1api~1stellar~1wallet/get"
+      },
+      "delete": {
+        "$ref": "#/paths/~1api~1stellar~1wallet/delete"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Standard Bearer JWT authentication token provided upon login/registration."
+      }
+    },
+    "schemas": {
+      "LinkWalletRequest": {
+        "type": "object",
+        "required": ["publicKey"],
+        "properties": {
+          "publicKey": {
+            "type": "string",
+            "pattern": "^G[A-Z2-7]{55}$",
+            "example": "GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFTGOBDKR3GYWUM7AZTQU",
+            "description": "56-character RFC 4648 Base32 Stellar public key starting with G."
+          }
+        }
+      },
+      "UnlinkWalletRequest": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "description": "User account password for re-authentication."
+          },
+          "reauthConfirmed": {
+            "type": "boolean",
+            "description": "Explicit re-authentication confirmation flag."
+          }
+        }
+      },
+      "WalletAccount": {
+        "type": "object",
+        "required": ["userId", "publicKey", "createdAt"],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "example": "usr_98fbc210"
+          },
+          "publicKey": {
+            "type": "string",
+            "example": "GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFTGOBDKR3GYWUM7AZTQU"
+          },
+          "createdAt": {
+            "type": "integer",
+            "example": 1714200000000
+          }
+        }
+      },
+      "AccountBalance": {
+        "type": "object",
+        "required": ["asset", "balance", "isNative"],
+        "properties": {
+          "asset": {
+            "type": "string",
+            "example": "native"
+          },
+          "balance": {
+            "type": "string",
+            "example": "250.5000000"
+          },
+          "isNative": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "WalletBalances": {
+        "type": "object",
+        "required": ["publicKey", "xlm", "balances", "fetchedAt"],
+        "properties": {
+          "publicKey": {
+            "type": "string",
+            "example": "GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFTGOBDKR3GYWUM7AZTQU"
+          },
+          "xlm": {
+            "type": "string",
+            "example": "250.5000000"
+          },
+          "balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountBalance"
+            }
+          },
+          "fetchedAt": {
+            "type": "integer",
+            "example": 1714200000000
+          },
+          "fromCache": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "WalletResponse": {
+        "type": "object",
+        "required": ["success", "wallet"],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/WalletAccount"
+          },
+          "balances": {
+            "$ref": "#/components/schemas/WalletBalances"
+          }
+        }
+      },
+      "UnlinkWalletResponse": {
+        "type": "object",
+        "required": ["success", "message", "unlinkedAt"],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Stellar wallet unlinked successfully."
+          },
+          "unlinkedAt": {
+            "type": "integer",
+            "example": 1714200000000
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["success", "error"],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "object",
+            "required": ["message"],
+            "properties": {
+              "message": {
+                "type": "string",
+                "example": "Invalid Stellar public key format"
+              },
+              "code": {
+                "type": "string",
+                "example": "INVALID_PUBLIC_KEY"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1170 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
+import * as crypto from 'crypto';
+
+import * as bcrypt from 'bcrypt';
+
+// ============================================================
+// USER MODEL
+// ============================================================
+
+export interface User {
+  id: string;
+  email: string;
+  passwordHash: string;
+
+  emailVerified: boolean;
+  emailVerifiedAt?: Date;
+
+  emailVerificationTokenHash?: string;
+  emailVerificationExpiresAt?: Date;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================
+// DTOs
+// ============================================================
+
+export class RegisterDto {
+  email!: string;
+  password!: string;
+}
+
+export class VerifyEmailDto {
+  token!: string;
+}
+
+export class ResendVerificationDto {
+  email!: string;
+}
+
+// ============================================================
+// RESPONSE TYPES
+// ============================================================
+
+export interface VerificationResponse {
+  message: string;
+}
+
+export interface RegistrationResponse {
+  id: string;
+  email: string;
+  emailVerified: boolean;
+  message: string;
+}
+
+// ============================================================
+// USER REPOSITORY
+// ============================================================
+
+export interface UserRepository {
+  findById(
+    id: string,
+  ): Promise<User | null>;
+
+  findByEmail(
+    email: string,
+  ): Promise<User | null>;
+
+  findByVerificationTokenHash(
+    tokenHash: string,
+  ): Promise<User | null>;
+
+  create(
+    user: User,
+  ): Promise<User>;
+
+  update(
+    id: string,
+    changes: Partial<User>,
+  ): Promise<User>;
+}
+
+// ============================================================
+// IN-MEMORY USER REPOSITORY
+// ============================================================
+
+@Injectable()
+export class InMemoryUserRepository
+  implements UserRepository {
+
+  private readonly users =
+    new Map<string, User>();
+
+  // ----------------------------------------------------------
+  // FIND BY ID
+  // ----------------------------------------------------------
+
+  async findById(
+    id: string,
+  ): Promise<User | null> {
+
+    return this.users.get(id) ?? null;
+  }
+
+  // ----------------------------------------------------------
+  // FIND BY EMAIL
+  // ----------------------------------------------------------
+
+  async findByEmail(
+    email: string,
+  ): Promise<User | null> {
+
+    const normalized =
+      email.trim().toLowerCase();
+
+    for (
+      const user of this.users.values()
+    ) {
+
+      if (
+        user.email === normalized
+      ) {
+        return user;
+      }
+    }
+
+    return null;
+  }
+
+  // ----------------------------------------------------------
+  // FIND BY VERIFICATION TOKEN
+  // ----------------------------------------------------------
+
+  async findByVerificationTokenHash(
+    tokenHash: string,
+  ): Promise<User | null> {
+
+    for (
+      const user of this.users.values()
+    ) {
+
+      if (
+        user.emailVerificationTokenHash ===
+        tokenHash
+      ) {
+        return user;
+      }
+    }
+
+    return null;
+  }
+
+  // ----------------------------------------------------------
+  // CREATE
+  // ----------------------------------------------------------
+
+  async create(
+    user: User,
+  ): Promise<User> {
+
+    this.users.set(
+      user.id,
+      user,
+    );
+
+    return user;
+  }
+
+  // ----------------------------------------------------------
+  // UPDATE
+  // ----------------------------------------------------------
+
+  async update(
+    id: string,
+    changes: Partial<User>,
+  ): Promise<User> {
+
+    const existing =
+      this.users.get(id);
+
+    if (!existing) {
+      throw new NotFoundException(
+        'User not found',
+      );
+    }
+
+    const updated: User = {
+      ...existing,
+      ...changes,
+      updatedAt: new Date(),
+    };
+
+    this.users.set(
+      id,
+      updated,
+    );
+
+    return updated;
+  }
+}
+
+// ============================================================
+// EMAIL SERVICE
+// ============================================================
+
+@Injectable()
+export class EmailVerificationService {
+
+  /*
+   * Replace this implementation with your actual email
+   * provider in production.
+   */
+
+  async sendVerificationEmail(
+    email: string,
+    verificationUrl: string,
+  ): Promise<void> {
+
+    console.log(
+      'Sending email verification:',
+      {
+        email,
+        verificationUrl,
+      },
+    );
+  }
+}
+
+// ============================================================
+// AUTH SERVICE
+// ============================================================
+
+@Injectable()
+export class AuthService {
+
+  /*
+   * Verification links expire after 24 hours.
+   */
+
+  private readonly VERIFICATION_TOKEN_TTL_MS =
+    24 * 60 * 60 * 1000;
+
+  private readonly BCRYPT_ROUNDS = 12;
+
+  constructor(
+    private readonly users:
+      UserRepository,
+
+    private readonly emailService:
+      EmailVerificationService,
+  ) {}
+
+  // ==========================================================
+  // REGISTER
+  // ==========================================================
+
+  async register(
+    dto: RegisterDto,
+  ): Promise<RegistrationResponse> {
+
+    // --------------------------------------------------------
+    // NORMALIZE EMAIL
+    // --------------------------------------------------------
+
+    const email =
+      this.normalizeEmail(
+        dto.email,
+      );
+
+    // --------------------------------------------------------
+    // VALIDATE EMAIL
+    // --------------------------------------------------------
+
+    this.validateEmail(email);
+
+    // --------------------------------------------------------
+    // VALIDATE PASSWORD
+    // --------------------------------------------------------
+
+    this.validatePassword(
+      dto.password,
+    );
+
+    // --------------------------------------------------------
+    // CHECK EXISTING ACCOUNT
+    // --------------------------------------------------------
+
+    const existingUser =
+      await this.users.findByEmail(
+        email,
+      );
+
+    if (existingUser) {
+
+      throw new ConflictException(
+        'An account with this email already exists',
+      );
+    }
+
+    // --------------------------------------------------------
+    // HASH PASSWORD
+    // --------------------------------------------------------
+
+    const passwordHash =
+      await bcrypt.hash(
+        dto.password,
+        this.BCRYPT_ROUNDS,
+      );
+
+    // --------------------------------------------------------
+    // GENERATE VERIFICATION TOKEN
+    // --------------------------------------------------------
+
+    const verificationToken =
+      this.generateVerificationToken();
+
+    // --------------------------------------------------------
+    // HASH TOKEN
+    // --------------------------------------------------------
+
+    const tokenHash =
+      this.hashVerificationToken(
+        verificationToken,
+      );
+
+    // --------------------------------------------------------
+    // TOKEN EXPIRATION
+    // --------------------------------------------------------
+
+    const expiresAt =
+      new Date(
+        Date.now() +
+        this.VERIFICATION_TOKEN_TTL_MS,
+      );
+
+    // --------------------------------------------------------
+    // CREATE USER
+    // --------------------------------------------------------
+
+    const now = new Date();
+
+    const user: User = {
+      id: this.generateId(),
+
+      email,
+
+      passwordHash,
+
+      /*
+       * A newly registered account is NOT verified.
+       */
+
+      emailVerified: false,
+
+      emailVerifiedAt:
+        undefined,
+
+      /*
+       * Only the hash is persisted.
+       */
+
+      emailVerificationTokenHash:
+        tokenHash,
+
+      emailVerificationExpiresAt:
+        expiresAt,
+
+      createdAt: now,
+
+      updatedAt: now,
+    };
+
+    await this.users.create(
+      user,
+    );
+
+    // --------------------------------------------------------
+    // SEND VERIFICATION EMAIL
+    // --------------------------------------------------------
+
+    const verificationUrl =
+      this.buildVerificationUrl(
+        verificationToken,
+      );
+
+    await this.emailService
+      .sendVerificationEmail(
+        user.email,
+        verificationUrl,
+      );
+
+    // --------------------------------------------------------
+    // RESPONSE
+    // --------------------------------------------------------
+
+    return {
+      id: user.id,
+      email: user.email,
+      emailVerified:
+        user.emailVerified,
+      message:
+        'Account created. Please verify your email address.',
+    };
+  }
+
+  // ==========================================================
+  // VERIFY EMAIL
+  // ==========================================================
+
+  async verifyEmail(
+    token: string,
+  ): Promise<VerificationResponse> {
+
+    // --------------------------------------------------------
+    // TOKEN VALIDATION
+    // --------------------------------------------------------
+
+    if (!token) {
+      throw new BadRequestException(
+        'Verification token is required',
+      );
+    }
+
+    // --------------------------------------------------------
+    // HASH TOKEN
+    // --------------------------------------------------------
+
+    const tokenHash =
+      this.hashVerificationToken(
+        token,
+      );
+
+    // --------------------------------------------------------
+    // FIND USER
+    // --------------------------------------------------------
+
+    const user =
+      await this.users
+        .findByVerificationTokenHash(
+          tokenHash,
+        );
+
+    if (!user) {
+
+      throw new BadRequestException(
+        'Invalid or expired verification token',
+      );
+    }
+
+    // --------------------------------------------------------
+    // ALREADY VERIFIED
+    // --------------------------------------------------------
+
+    if (
+      user.emailVerified
+    ) {
+
+      /*
+       * Verification is idempotent.
+       *
+       * A user clicking the same verification link again
+       * should not cause their account to become invalid.
+       */
+
+      return {
+        message:
+          'Email address is already verified.',
+      };
+    }
+
+    // --------------------------------------------------------
+    // CHECK EXPIRATION
+    // --------------------------------------------------------
+
+    if (
+      !user.emailVerificationExpiresAt ||
+      user.emailVerificationExpiresAt
+        .getTime() <= Date.now()
+    ) {
+
+      /*
+       * Remove expired credentials.
+       */
+
+      await this.users.update(
+        user.id,
+        {
+          emailVerificationTokenHash:
+            undefined,
+
+          emailVerificationExpiresAt:
+            undefined,
+        },
+      );
+
+      throw new BadRequestException(
+        'Invalid or expired verification token',
+      );
+    }
+
+    // --------------------------------------------------------
+    // MARK EMAIL VERIFIED
+    // --------------------------------------------------------
+
+    await this.users.update(
+      user.id,
+      {
+        emailVerified:
+          true,
+
+        emailVerifiedAt:
+          new Date(),
+
+        /*
+         * Verification tokens are single-use.
+         */
+
+        emailVerificationTokenHash:
+          undefined,
+
+        emailVerificationExpiresAt:
+          undefined,
+      },
+    );
+
+    // --------------------------------------------------------
+    // SUCCESS
+    // --------------------------------------------------------
+
+    return {
+      message:
+        'Email address verified successfully.',
+    };
+  }
+
+  // ==========================================================
+  // RESEND VERIFICATION EMAIL
+  // ==========================================================
+
+  async resendVerificationEmail(
+    email: string,
+  ): Promise<VerificationResponse> {
+
+    const normalizedEmail =
+      this.normalizeEmail(email);
+
+    // --------------------------------------------------------
+    // FIND USER
+    // --------------------------------------------------------
+
+    const user =
+      await this.users.findByEmail(
+        normalizedEmail,
+      );
+
+    /*
+     * Do not reveal whether an email exists.
+     */
+
+    const genericResponse = {
+      message:
+        'If the account exists and is not verified, a verification email has been sent.',
+    };
+
+    if (!user) {
+      return genericResponse;
+    }
+
+    // --------------------------------------------------------
+    // ALREADY VERIFIED
+    // --------------------------------------------------------
+
+    if (
+      user.emailVerified
+    ) {
+
+      return genericResponse;
+    }
+
+    // --------------------------------------------------------
+    // GENERATE NEW TOKEN
+    // --------------------------------------------------------
+
+    const verificationToken =
+      this.generateVerificationToken();
+
+    // --------------------------------------------------------
+    // HASH NEW TOKEN
+    // --------------------------------------------------------
+
+    const tokenHash =
+      this.hashVerificationToken(
+        verificationToken,
+      );
+
+    // --------------------------------------------------------
+    // NEW EXPIRATION
+    // --------------------------------------------------------
+
+    const expiresAt =
+      new Date(
+        Date.now() +
+        this.VERIFICATION_TOKEN_TTL_MS,
+      );
+
+    // --------------------------------------------------------
+    // REPLACE OLD TOKEN
+    // --------------------------------------------------------
+
+    await this.users.update(
+      user.id,
+      {
+        emailVerificationTokenHash:
+          tokenHash,
+
+        emailVerificationExpiresAt:
+          expiresAt,
+      },
+    );
+
+    // --------------------------------------------------------
+    // BUILD URL
+    // --------------------------------------------------------
+
+    const verificationUrl =
+      this.buildVerificationUrl(
+        verificationToken,
+      );
+
+    // --------------------------------------------------------
+    // SEND EMAIL
+    // --------------------------------------------------------
+
+    await this.emailService
+      .sendVerificationEmail(
+        user.email,
+        verificationUrl,
+      );
+
+    return genericResponse;
+  }
+
+  // ==========================================================
+  // CHECK EMAIL VERIFICATION STATUS
+  // ==========================================================
+
+  async isEmailVerified(
+    userId: string,
+  ): Promise<boolean> {
+
+    const user =
+      await this.users.findById(
+        userId,
+      );
+
+    if (!user) {
+      throw new NotFoundException(
+        'User not found',
+      );
+    }
+
+    return user.emailVerified;
+  }
+
+  // ==========================================================
+  // REQUIRE VERIFIED EMAIL
+  // ==========================================================
+
+  async requireVerifiedEmail(
+    userId: string,
+  ): Promise<User> {
+
+    const user =
+      await this.users.findById(
+        userId,
+      );
+
+    if (!user) {
+      throw new NotFoundException(
+        'User not found',
+      );
+    }
+
+    if (
+      !user.emailVerified
+    ) {
+
+      throw new BadRequestException(
+        'Email address must be verified before using this resource',
+      );
+    }
+
+    return user;
+  }
+
+  // ==========================================================
+  // GENERATE VERIFICATION TOKEN
+  // ==========================================================
+
+  private generateVerificationToken(): string {
+
+    /*
+     * 32 random bytes provide 256 bits of entropy.
+     *
+     * crypto.randomBytes() is appropriate for security tokens.
+     */
+
+    return crypto
+      .randomBytes(32)
+      .toString('hex');
+  }
+
+  // ==========================================================
+  // HASH VERIFICATION TOKEN
+  // ==========================================================
+
+  private hashVerificationToken(
+    token: string,
+  ): string {
+
+    /*
+     * SHA-256 is sufficient for hashing a high-entropy random
+     * token before database storage.
+     */
+
+    return crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+  }
+
+  // ==========================================================
+  // NORMALIZE EMAIL
+  // ==========================================================
+
+  private normalizeEmail(
+    email: string,
+  ): string {
+
+    return email
+      .trim()
+      .toLowerCase();
+  }
+
+  // ==========================================================
+  // EMAIL VALIDATION
+  // ==========================================================
+
+  private validateEmail(
+    email: string,
+  ): void {
+
+    const valid =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        .test(email);
+
+    if (!valid) {
+      throw new BadRequestException(
+        'Invalid email address',
+      );
+    }
+  }
+
+  // ==========================================================
+  // PASSWORD VALIDATION
+  // ==========================================================
+
+  private validatePassword(
+    password: string,
+  ): void {
+
+    if (
+      !password ||
+      password.length < 12
+    ) {
+
+      throw new BadRequestException(
+        'Password must contain at least 12 characters',
+      );
+    }
+
+    if (
+      password.length > 128
+    ) {
+
+      throw new BadRequestException(
+        'Password must not exceed 128 characters',
+      );
+    }
+
+    if (
+      !/[A-Z]/.test(password)
+    ) {
+
+      throw new BadRequestException(
+        'Password must contain an uppercase letter',
+      );
+    }
+
+    if (
+      !/[a-z]/.test(password)
+    ) {
+
+      throw new BadRequestException(
+        'Password must contain a lowercase letter',
+      );
+    }
+
+    if (
+      !/[0-9]/.test(password)
+    ) {
+
+      throw new BadRequestException(
+        'Password must contain a number',
+      );
+    }
+
+    if (
+      !/[^A-Za-z0-9]/.test(password)
+    ) {
+
+      throw new BadRequestException(
+        'Password must contain a special character',
+      );
+    }
+  }
+
+  // ==========================================================
+  // BUILD VERIFICATION URL
+  // ==========================================================
+
+  private buildVerificationUrl(
+    token: string,
+  ): string {
+
+    const frontendUrl =
+      process.env.FRONTEND_URL ??
+      'http://localhost:3000';
+
+    return (
+      `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`
+    );
+  }
+
+  // ==========================================================
+  // GENERATE USER ID
+  // ==========================================================
+
+  private generateId(): string {
+
+    return [
+      'user',
+      Date.now(),
+      crypto
+        .randomBytes(8)
+        .toString('hex'),
+    ].join('_');
+  }
+}
+
+// ============================================================
+// AUTH CONTROLLER
+// ============================================================
+
+@Controller('auth')
+export class AuthController {
+
+  constructor(
+    private readonly authService:
+      AuthService,
+  ) {}
+
+  // ==========================================================
+  // REGISTER
+  // ==========================================================
+
+  @Post('register')
+  async register(
+    @Body()
+    dto: RegisterDto,
+  ): Promise<RegistrationResponse> {
+
+    return this.authService.register(
+      dto,
+    );
+  }
+
+  // ==========================================================
+  // VERIFY EMAIL
+  // ==========================================================
+
+  @Post('verify-email')
+  async verifyEmail(
+    @Body()
+    dto: VerifyEmailDto,
+  ): Promise<VerificationResponse> {
+
+    return this.authService.verifyEmail(
+      dto.token,
+    );
+  }
+
+  // ==========================================================
+  // RESEND VERIFICATION
+  // ==========================================================
+
+  @Post('resend-verification')
+  async resendVerification(
+    @Body()
+    dto: ResendVerificationDto,
+  ): Promise<VerificationResponse> {
+
+    return this.authService
+      .resendVerificationEmail(
+        dto.email,
+      );
+  }
+}
+
+// ============================================================
+// DATABASE SCHEMA
+// ============================================================
+
+/*
+ * For PostgreSQL, the users table should contain fields
+ * similar to:
+ *
+ *
+ * ALTER TABLE users
+ * ADD COLUMN email_verified BOOLEAN
+ * NOT NULL DEFAULT FALSE;
+ *
+ *
+ * ALTER TABLE users
+ * ADD COLUMN email_verified_at TIMESTAMPTZ;
+ *
+ *
+ * ALTER TABLE users
+ * ADD COLUMN email_verification_token_hash TEXT;
+ *
+ *
+ * ALTER TABLE users
+ * ADD COLUMN email_verification_expires_at TIMESTAMPTZ;
+ *
+ *
+ * CREATE UNIQUE INDEX
+ * users_email_verification_token_hash_idx
+ * ON users(email_verification_token_hash)
+ * WHERE email_verification_token_hash IS NOT NULL;
+ *
+ *
+ * Email should also normally be unique:
+ *
+ *
+ * CREATE UNIQUE INDEX
+ * users_email_unique
+ * ON users(email);
+ *
+ */
+
+// ============================================================
+// VERIFICATION FLOW
+// ============================================================
+
+/*
+ *
+ *                  REGISTRATION
+ *
+ * User
+ *   |
+ *   v
+ * POST /auth/register
+ *   |
+ *   v
+ * Validate email
+ *   |
+ *   v
+ * Validate password
+ *   |
+ *   v
+ * Check duplicate account
+ *   |
+ *   v
+ * Hash password
+ *   |
+ *   v
+ * Generate secure token
+ *   |
+ *   v
+ * Hash token
+ *   |
+ *   v
+ * Store token hash
+ *   |
+ *   v
+ * Set expiration
+ *   |
+ *   v
+ * Create user
+ *   |
+ *   v
+ * Send verification email
+ *   |
+ *   v
+ * emailVerified = false
+ *
+ *
+ *
+ *                  VERIFICATION
+ *
+ * User clicks email
+ *       |
+ *       v
+ * POST /auth/verify-email
+ *       |
+ *       v
+ * Hash supplied token
+ *       |
+ *       v
+ * Find matching token hash
+ *       |
+ *       +---- NOT FOUND
+ *       |       |
+ *       |       v
+ *       |     Reject
+ *       |
+ *       v
+ * Check expiration
+ *       |
+ *       +---- EXPIRED
+ *       |       |
+ *       |       v
+ *       |     Reject
+ *       |
+ *       v
+ * emailVerified = true
+ *       |
+ *       v
+ * emailVerifiedAt = now
+ *       |
+ *       v
+ * Delete verification token
+ *       |
+ *       v
+ * Success
+ *
+ */
+
+// ============================================================
+// AUTHORIZATION GUARD EXAMPLE
+// ============================================================
+
+/*
+ * Once email verification exists, sensitive resources can
+ * require verified email addresses.
+ *
+ * Example:
+ *
+ *
+ * @Get('protected-resource')
+ * async protectedResource(
+ *   @Req() req: Request,
+ * ) {
+ *
+ *   await this.authService
+ *     .requireVerifiedEmail(
+ *       req.user.id,
+ *     );
+ *
+ *   return {
+ *     message: 'Access granted',
+ *   };
+ * }
+ *
+ */
+
+// ============================================================
+// SECURITY REQUIREMENTS
+// ============================================================
+
+/*
+ *
+ * 1. DO NOT store raw verification tokens.
+ *
+ *    Store:
+ *
+ *      SHA256(token)
+ *
+ *    instead of:
+ *
+ *      token
+ *
+ *
+ * 2. Generate tokens using crypto.randomBytes().
+ *
+ *
+ * 3. Make verification tokens expire.
+ *
+ *
+ * 4. Make tokens single-use.
+ *
+ *
+ * 5. Replace the previous token when resending.
+ *
+ *
+ * 6. Do not log raw verification tokens.
+ *
+ *
+ * 7. Do not log verification URLs in production.
+ *
+ *
+ * 8. Use HTTPS for verification links.
+ *
+ *
+ * 9. Rate-limit resend-verification.
+ *
+ *
+ * 10. Avoid exposing account existence unnecessarily.
+ *
+ *
+ * 11. Normalize email addresses consistently.
+ *
+ *
+ * 12. Enforce unique email addresses at the database level.
+ *
+ *
+ * 13. Require emailVerified for sensitive application
+ *     operations when appropriate.
+ *
+ *
+ * 14. Invalidate the verification token immediately after
+ *     successful verification.
+ *
+ */
+
+// ============================================================
+// RATE LIMITING RECOMMENDATION
+// ============================================================
+
+/*
+ *
+ * The following endpoint should be rate limited:
+ *
+ * POST /auth/resend-verification
+ *
+ *
+ * Example policy:
+ *
+ *   3 requests / 15 minutes / IP
+ *
+ * plus:
+ *
+ *   3 requests / hour / email
+ *
+ *
+ * This prevents attackers from abusing the email service
+ * or repeatedly sending messages to another person's email.
+ *
+ */
+
+// ============================================================
+// END
+// ============================================================
