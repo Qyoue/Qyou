@@ -1,3 +1,4 @@
+import { newId } from '../utils/ids.js';
 /**
  * Account Outgoing Transaction Watcher & Anomaly Alerting (#1031)
  *
@@ -101,7 +102,7 @@ export class AccountTransactionWatcher {
 
     // Unauthorized outgoing transaction detected!
     const alert: UnexpectedTransactionAlert = {
-      alertId: `alert-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      alertId: newId('alert'),
       txHash: tx.hash,
       sourceAccount: tx.sourceAccount,
       destination: tx.destination,

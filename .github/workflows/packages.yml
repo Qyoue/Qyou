@@ -103,3 +103,15 @@ jobs:
           STELLAR_RPC_URL: http://localhost:8000/soroban/rpc
           STELLAR_PASSPHRASE: "Standalone Network ; February 2017"
         run: npm run test:integration -w @qyou/stellar
+
+  stellar-clean-build:
+    name: Stellar clean-checkout build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build -w @qyou/stellar

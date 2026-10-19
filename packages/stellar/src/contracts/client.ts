@@ -17,6 +17,8 @@ export interface IncentivePoolClientConfig {
   readonly contractInstance?: IncentivePoolContract;
   readonly network?: NetworkType;
   readonly allowMainnet?: boolean;
+  /** Submits the operation to the network and returns the ledger transaction hash. */
+  readonly submitTransaction?: (op: { method: string; args: string[] }) => Promise<{ hash: string }>;
 }
 
 export interface DistributionResult {
@@ -53,7 +55,10 @@ export class IncentivePoolClient {
   private readonly _allowMainnet?: boolean;
   private readonly _distributeTxHashes = new Map<string, string>();
 
+  private readonly _submit?: IncentivePoolClientConfig['submitTransaction'];
+
   constructor(config: IncentivePoolClientConfig) {
+    this._submit = config.submitTransaction;
     if (!config.contractId || config.contractId.trim().length === 0) {
       throw new ContractError('contractId is required to instantiate IncentivePoolClient');
     }
@@ -85,7 +90,7 @@ export class IncentivePoolClient {
       amount: params.amount,
     });
 
-    const txHash = this.generateSimulatedTxHash('deposit', params.from);
+    const txHash = await this.submit('deposit', params.from);
 
     return {
       success: true,
@@ -128,7 +133,7 @@ export class IncentivePoolClient {
 
     let txHash = this._distributeTxHashes.get(params.idempotencyKey);
     if (!txHash) {
-      txHash = this.generateSimulatedTxHash('distrib', params.idempotencyKey);
+      txHash = await this.submit('distrib', params.idempotencyKey);
       this._distributeTxHashes.set(params.idempotencyKey, txHash);
     }
 
@@ -169,12 +174,13 @@ export class IncentivePoolClient {
    */
   public async upgrade(caller: string, newWasmHash: string): Promise<{ txHash: string }> {
     this._contract.upgrade(caller, newWasmHash);
-    const txHash = this.generateSimulatedTxHash('upgrade', newWasmHash);
+    const txHash = await this.submit('upgrade', newWasmHash);
     return { txHash };
   }
 
-  private generateSimulatedTxHash(prefix: string, seed: string): string {
-    const raw = `${prefix}-${this.contractId}-${seed}-${Date.now()}-${Math.random()}`;
-    return crypto.createHash('sha256').update(raw).digest('hex');
+  /** Returns the real ledger hash from submission; without a submitter the simulator yields a deterministic digest. */
+  private async submit(method: string, seed: string): Promise<string> {
+    if (this._submit) return (await this._submit({ method, args: [this.contractId, seed] })).hash;
+    return crypto.createHash('sha256').update(`${method}-${this.contractId}-${seed}`).digest('hex');
   }
 }
