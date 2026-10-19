@@ -1,3 +1,4 @@
+import { newId } from '../utils/ids.js';
 /**
  * Payment-Layer Reconciliation Job (#1065)
  *
@@ -96,7 +97,7 @@ export class ReconciliationJob {
    */
   public async reconcile(): Promise<ReconciliationRunReport> {
     const startedAt = Date.now();
-    const runId = `recon-run-${startedAt}-${Math.random().toString(36).substring(2, 7)}`;
+    const runId = newId('recon-run');
 
     const [dbRecords, chainTxs] = await Promise.all([
       this._dbProvider(),

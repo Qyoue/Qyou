@@ -1,3 +1,4 @@
+import { newId } from './utils/ids.js';
 /**
  * Reward history user endpoint service and queue-completion reward event listener.
  */
@@ -16,7 +17,7 @@ export class RewardHistoryService {
 
   public recordReward(userId: string, queueId: string, amount: string, asset: string = 'QYOU'): RewardHistoryEntry {
     const entry: RewardHistoryEntry = {
-      id: `rw_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: newId('rw'),
       userId,
       queueId,
       rewardAmount: amount,

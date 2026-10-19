@@ -26,6 +26,9 @@
     "example:reward": "node --import tsx examples/send-test-reward.ts",
     "smoke-test": "node --import tsx scripts/post-deploy-smoke-test.ts"
   },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^13.3.0"
+  },
   "devDependencies": {
     "typescript": "^5.9.3"
   }

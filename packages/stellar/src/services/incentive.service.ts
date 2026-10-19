@@ -1,3 +1,4 @@
+import { newId } from '../utils/ids.js';
 import { IncentivePoolClient } from '../contracts/client.js';
 import {
   RewardEligibilityService,
@@ -156,7 +157,7 @@ export class IncentiveService {
       throw new Error(`Participant not eligible for reward: ${eligibility.reason}`);
     }
 
-    const rewardId = `reward-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const rewardId = newId('reward');
     const idempotencyKey = params.idempotencyKey || `qreward:${userId}:${queueId}`;
 
     const record: RewardRecord = {

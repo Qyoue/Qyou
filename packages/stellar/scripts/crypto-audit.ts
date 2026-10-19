@@ -143,12 +143,15 @@ export class CryptoDependencyAuditor {
       });
     }
 
-    // If no crypto packages directly matched, include baseline verification for stellar package
-    if (results.length === 0) {
+    // Fail on fake-crypto patterns in source (Math.random key/ID generation, startsWith('G') validation)
+    results.push(...this.scanSource(path.join(this._rootDir, 'packages/stellar/src')));
+
+    if (!monitoredDeps.has('@stellar/stellar-sdk')) {
       results.push({
         packageName: '@stellar/stellar-sdk',
-        version: '13.0.0 (simulated/pinned)',
-        status: 'PASSED',
+        version: 'missing',
+        status: 'FAILED',
+        reason: 'Stellar SDK is not declared as a dependency',
       });
     }
 
@@ -168,6 +171,29 @@ export class CryptoDependencyAuditor {
           ? `All ${results.length} cryptographic dependencies passed aggressive security verification.`
           : `Crypto dependency audit FAILED with ${failedCount} security policy violation(s).`,
     };
+  }
+
+  private scanSource(dir: string): DependencyAuditResult[] {
+    const found: DependencyAuditResult[] = [];
+    const rules: [RegExp, string][] = [
+      [/Math\.random\(/, 'Math.random is not cryptographically secure'],
+      [/startsWith\((['"])[GS]\1\)/, "startsWith('G') style key validation is not real validation"],
+    ];
+    const walk = (d: string) => {
+      if (!fs.existsSync(d)) return;
+      for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.name.endsWith('.ts') && !full.endsWith('client/horizon.client.ts')) {
+          const text = fs.readFileSync(full, 'utf8');
+          for (const [re, reason] of rules) {
+            if (re.test(text)) found.push({ packageName: path.relative(this._rootDir, full), version: '-', status: 'FAILED', reason });
+          }
+        }
+      }
+    };
+    walk(dir);
+    return found;
   }
 
   public isCryptoPackage(name: string): boolean {
