@@ -32,6 +32,7 @@ export class AwsSecretsManagerProvider implements ISecretsManagerProvider {
   public readonly name = 'aws-secrets-manager';
   private readonly _cache = new Map<string, { value: string; expiresAt: number }>();
   private readonly _ttlMs = 300_000; // 5 minute cache
+  private _client?: import('@aws-sdk/client-secrets-manager').SecretsManagerClient;
 
   public async getSecret(secretName: string): Promise<string> {
     const cached = this._cache.get(secretName);
@@ -39,8 +40,10 @@ export class AwsSecretsManagerProvider implements ISecretsManagerProvider {
       return cached.value;
     }
 
-    // In production, invokes AWS SDK SecretsManagerClient.send(new GetSecretValueCommand({ SecretId: secretName }))
-    const secretVal = process.env[secretName] || process.env.STELLAR_DISTRIBUTION_SECRET_KEY || '';
+    const { SecretsManagerClient, GetSecretValueCommand } = await import('@aws-sdk/client-secrets-manager');
+    this._client ??= new SecretsManagerClient({});
+    const res = await this._client.send(new GetSecretValueCommand({ SecretId: secretName }));
+    const secretVal = res.SecretString ?? '';
     if (!secretVal) {
       throw new Error(`AWS Secret '${secretName}' could not be resolved.`);
     }
@@ -77,10 +80,19 @@ export class SecretsManager {
   constructor(provider?: ISecretsManagerProvider) {
     if (provider) {
       this._provider = provider;
-    } else if (process.env.NODE_ENV === 'production') {
+    } else if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
       this._provider = new AwsSecretsManagerProvider();
-    } else {
+    } else if (['development', 'test', undefined].includes(process.env.NODE_ENV)) {
       this._provider = new InMemorySecretsProvider();
+    } else {
+      throw new Error(`No secrets provider configured for NODE_ENV '${process.env.NODE_ENV}'.`);
+    }
+  }
+
+  /** Fails closed at boot in production if the distribution key cannot be read. */
+  public async assertReady(): Promise<void> {
+    if (process.env.NODE_ENV === 'production') {
+      await this.getStellarDistributionKey();
     }
   }
 

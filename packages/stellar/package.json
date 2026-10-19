@@ -27,6 +27,7 @@
     "smoke-test": "node --import tsx scripts/post-deploy-smoke-test.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.700.0",
     "@stellar/stellar-sdk": "^13.3.0"
   },
   "devDependencies": {
