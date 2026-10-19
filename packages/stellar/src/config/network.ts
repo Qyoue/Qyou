@@ -34,10 +34,13 @@ export function getStellarNetworkConfig(): StellarNetworkConfig {
     // Default to testnet in non-production environments if not explicitly configured
     let selectedKey = envNetwork;
     if (!selectedKey) {
-        selectedKey = nodeEnv === 'production' ? 'mainnet' : 'testnet';
+        if (nodeEnv === 'production') {
+            throw new Error('STELLAR_NETWORK must be set explicitly in production (testnet, futurenet or mainnet).');
+        }
+        selectedKey = 'testnet';
     }
 
-    const config = STELLAR_NETWORKS[selectedKey];
+    const config = Object.hasOwn(STELLAR_NETWORKS, selectedKey) ? STELLAR_NETWORKS[selectedKey] : undefined;
     if (!config) {
         throw new Error(`Invalid or unsupported Stellar network configuration: "${selectedKey}". Choose from testnet, futurenet, mainnet.`);
     }
