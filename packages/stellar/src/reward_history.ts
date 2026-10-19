@@ -1,4 +1,5 @@
-import { newId } from './utils/ids.js';
+import type { IncentiveService } from './services/incentive.service.js';
+
 /**
  * Reward history user endpoint service and queue-completion reward event listener.
  */
@@ -33,11 +34,13 @@ export class RewardHistoryService {
   }
 }
 
+/**
+ * @deprecated Delegates to IncentiveService so eligibility, kill switch, abuse and idempotency guards apply.
+ */
 export class QueueCompletionRewardListener {
-  constructor(private rewardService: RewardHistoryService) {}
+  constructor(private incentive: Pick<IncentiveService, 'reward'>) {}
 
-  public async onQueueCompleted(userId: string, queueId: string): Promise<void> {
-    // Reward user with 10 QYOU tokens on queue completion
-    this.rewardService.recordReward(userId, queueId, '10.0');
+  public async onQueueCompleted(userId: string, queueId: string, recipient: string): Promise<void> {
+    await this.incentive.reward({ userId, queueId, recipient, idempotencyKey: `${userId}:${queueId}` });
   }
 }
