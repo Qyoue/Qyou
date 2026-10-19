@@ -1,3 +1,4 @@
+import { Keypair } from '@stellar/stellar-sdk';
 import {
   InvalidPublicKeyError,
   WalletAlreadyLinkedError,
@@ -155,22 +156,9 @@ export class WalletService {
    * Generates a new random Stellar keypair for account creation (#1038).
    */
   public createAccount(): { publicKey: string; secretKey: string } {
-    const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    // Generate valid 56-char Ed25519 public key starting with 'G'
-    let publicKey = 'G';
-    const randomBytes = new Uint8Array(35);
-    for (let i = 0; i < 35; i++) {
-      randomBytes[i] = Math.floor(Math.random() * 256);
-    }
-    for (let i = 0; i < 55; i++) {
-      publicKey += BASE32_ALPHABET[randomBytes[i % 35] % 32];
-    }
-
-    // Generate valid 56-char secret seed starting with 'S'
-    let secretKey = 'S';
-    for (let i = 0; i < 55; i++) {
-      secretKey += BASE32_ALPHABET[Math.floor(Math.random() * 32)];
-    }
+    const kp = Keypair.random();
+    const publicKey = kp.publicKey();
+    const secretKey = kp.secret();
 
     return { publicKey, secretKey };
   }
