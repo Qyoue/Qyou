@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.git
+.github
+**/dist
+**/.next
+**/.expo
+coverage
+**/target
+.env
+.env.*
+!.env.example
+docs
+*.md

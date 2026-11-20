@@ -20,7 +20,9 @@
       "post": {
         "summary": "Link a Stellar Wallet to User Account",
         "description": "Binds a 56-character Ed25519 Stellar public key (starts with G) to the authenticated user account (#1007, #1055).",
-        "tags": ["Stellar"],
+        "tags": [
+          "Stellar"
+        ],
         "security": [
           {
             "bearerAuth": []
@@ -82,7 +84,9 @@
       "get": {
         "summary": "Get Linked Stellar Wallet & Balances",
         "description": "Retrieves the authenticated user's linked Stellar public key, creation timestamp, and cached XLM/token balances (#1008, #1055).",
-        "tags": ["Stellar"],
+        "tags": [
+          "Stellar"
+        ],
         "security": [
           {
             "bearerAuth": []
@@ -124,7 +128,9 @@
       "delete": {
         "summary": "Unlink Stellar Wallet",
         "description": "Unlinks the user's Stellar wallet. Enforces re-authentication confirmation or password verification for security (#1009, #1055).",
-        "tags": ["Stellar"],
+        "tags": [
+          "Stellar"
+        ],
         "security": [
           {
             "bearerAuth": []
@@ -194,6 +200,190 @@
       "delete": {
         "$ref": "#/paths/~1api~1stellar~1wallet/delete"
       }
+    },
+    "/api/v1/stellar/rewards": {
+      "get": {
+        "summary": "Reward history of the authenticated user (newest first)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of rewards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "rewards": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "queueId": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "string"
+                          },
+                          "asset": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "transactionHash": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "confirmedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid limit or cursor"
+          },
+          "401": {
+            "description": "Authentication required"
+          }
+        }
+      }
+    },
+    "/api/stellar/rewards": {
+      "get": {
+        "summary": "Reward history of the authenticated user (newest first)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of rewards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "rewards": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "queueId": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "string"
+                          },
+                          "asset": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "transactionHash": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "confirmedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid limit or cursor"
+          },
+          "401": {
+            "description": "Authentication required"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -208,7 +398,9 @@
     "schemas": {
       "LinkWalletRequest": {
         "type": "object",
-        "required": ["publicKey"],
+        "required": [
+          "publicKey"
+        ],
         "properties": {
           "publicKey": {
             "type": "string",
@@ -233,7 +425,11 @@
       },
       "WalletAccount": {
         "type": "object",
-        "required": ["userId", "publicKey", "createdAt"],
+        "required": [
+          "userId",
+          "publicKey",
+          "createdAt"
+        ],
         "properties": {
           "userId": {
             "type": "string",
@@ -251,7 +447,11 @@
       },
       "AccountBalance": {
         "type": "object",
-        "required": ["asset", "balance", "isNative"],
+        "required": [
+          "asset",
+          "balance",
+          "isNative"
+        ],
         "properties": {
           "asset": {
             "type": "string",
@@ -269,7 +469,12 @@
       },
       "WalletBalances": {
         "type": "object",
-        "required": ["publicKey", "xlm", "balances", "fetchedAt"],
+        "required": [
+          "publicKey",
+          "xlm",
+          "balances",
+          "fetchedAt"
+        ],
         "properties": {
           "publicKey": {
             "type": "string",
@@ -297,7 +502,10 @@
       },
       "WalletResponse": {
         "type": "object",
-        "required": ["success", "wallet"],
+        "required": [
+          "success",
+          "wallet"
+        ],
         "properties": {
           "success": {
             "type": "boolean",
@@ -313,7 +521,11 @@
       },
       "UnlinkWalletResponse": {
         "type": "object",
-        "required": ["success", "message", "unlinkedAt"],
+        "required": [
+          "success",
+          "message",
+          "unlinkedAt"
+        ],
         "properties": {
           "success": {
             "type": "boolean",
@@ -331,7 +543,10 @@
       },
       "ErrorResponse": {
         "type": "object",
-        "required": ["success", "error"],
+        "required": [
+          "success",
+          "error"
+        ],
         "properties": {
           "success": {
             "type": "boolean",
@@ -339,7 +554,9 @@
           },
           "error": {
             "type": "object",
-            "required": ["message"],
+            "required": [
+              "message"
+            ],
             "properties": {
               "message": {
                 "type": "string",

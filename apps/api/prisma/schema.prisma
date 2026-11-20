@@ -33,3 +33,33 @@ model WalletLink {
   @@index([userId])
   @@map("wallet_links")
 }
+
+model Reward {
+  id              String    @id
+  userId          String
+  queueId         String
+  recipient       String
+  amount          String
+  asset           String
+  status          String    @default("pending")
+  transactionHash String?
+  error           String?
+  idempotencyKey  String?   @unique
+  createdAt       DateTime  @default(now())
+  confirmedAt     DateTime?
+
+  @@index([userId, createdAt])
+  @@index([queueId])
+  @@map("rewards")
+}
+
+model QueueIncentiveConfig {
+  queueId          String   @id
+  enabled          Boolean  @default(true)
+  rewardAmount     String
+  asset            String
+  maxRewardsPerUser Int?
+  updatedAt        DateTime @updatedAt
+
+  @@map("queue_incentive_configs")
+}

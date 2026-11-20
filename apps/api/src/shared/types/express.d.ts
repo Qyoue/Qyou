@@ -5,6 +5,8 @@ declare module 'express-serve-static-core' {
     user?: {
       id: string;
       email: string;
+      /** Epoch ms of the credential check that issued the access token (JWT `iat`). */
+      lastAuthAt?: number;
     };
   }
 }

@@ -1,3 +1,5 @@
+import { ErrorCode, ERROR_STATUS } from '@qyou/error-codes';
+
 // #824: HTTP status code mapping for each error subclass:
 // | Class              | statusCode | code              |
 // |--------------------|-----------|-------------------|
@@ -19,24 +21,24 @@ export class AppError extends Error {
 
 export class ValidationError extends AppError {
   constructor(message: string) {
-    super(400, message, 'VALIDATION_ERROR');
+    super(ERROR_STATUS[ErrorCode.VALIDATION_ERROR], message, ErrorCode.VALIDATION_ERROR);
   }
 }
 
 export class ConflictError extends AppError {
   constructor(message: string) {
-    super(409, message, 'CONFLICT');
+    super(ERROR_STATUS[ErrorCode.CONFLICT], message, ErrorCode.CONFLICT);
   }
 }
 
 export class UnauthorizedError extends AppError {
   constructor(message = 'Invalid credentials') {
-    super(401, message, 'UNAUTHORIZED');
+    super(ERROR_STATUS[ErrorCode.UNAUTHORIZED], message, ErrorCode.UNAUTHORIZED);
   }
 }
 
 export class NotFoundError extends AppError {
   constructor(message = 'Not found') {
-    super(404, message, 'NOT_FOUND');
+    super(ERROR_STATUS[ErrorCode.NOT_FOUND], message, ErrorCode.NOT_FOUND);
   }
 }

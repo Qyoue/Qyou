@@ -1,0 +1,14 @@
+# Code owners. Replace the placeholder teams with real GitHub team slugs
+# (an entry naming a missing team is ignored) and enable "Require review from
+# Code Owners" in branch protection.
+
+*                                         @Qyoue/maintainers
+/apps/api/                                @Qyoue/backend
+/apps/web/                                @Qyoue/web
+/apps/mobile/                             @Qyoue/mobile
+/packages/stellar/                        @Qyoue/stellar
+/packages/stellar/contracts/              @Qyoue/stellar @Qyoue/security
+/packages/shared/                         @Qyoue/maintainers
+/.github/                                 @Qyoue/maintainers
+/infra/                                   @Qyoue/maintainers
+/SECURITY.md                              @Qyoue/security

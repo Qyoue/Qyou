@@ -11,6 +11,7 @@ import { UnauthorizedDistributionError } from '../errors/stellar-error.js';
 import { NetworkGuard } from '../security/network-guard.js';
 import { DistributionMetricsCollector } from '../analytics/metrics.js';
 import { TransactionFeeTracker } from '../analytics/fee-tracker.js';
+import type { IncentiveStore } from './incentive-store.js';
 
 export type RewardStatus = 'pending' | 'confirmed' | 'failed';
 
@@ -39,8 +40,8 @@ export interface IncentiveServiceOptions {
   readonly internalTriggerSecret?: string;
   readonly allowMainnet?: boolean;
   readonly metrics?: DistributionMetricsCollector;
-  /** Runs before each payout; throw (for example `PayoutPreflightError`) to stop it (#1364). */
-  readonly payoutPreflight?: (params: { recipient: string; asset: string; amount: string }) => Promise<void>;
+  /** Durable store for rewards, idempotency keys and queue configs (write-through). */
+  readonly store?: IncentiveStore;
 }
 
 export class IncentiveService {
@@ -53,7 +54,7 @@ export class IncentiveService {
   private readonly _allowMainnet?: boolean;
   private readonly _adminSignerKey?: string;
   private readonly _metrics: DistributionMetricsCollector;
-  private readonly _payoutPreflight?: IncentiveServiceOptions['payoutPreflight'];
+  private readonly _store?: IncentiveStore;
   private readonly _queueConfigs = new Map<string, QueueIncentiveConfig>();
   private readonly _rewards = new Map<string, RewardRecord>();
 
@@ -76,7 +77,14 @@ export class IncentiveService {
     this._internalTriggerSecret = options.internalTriggerSecret;
     this._allowMainnet = options.allowMainnet;
     this._metrics = options.metrics || DistributionMetricsCollector.getInstance();
-    this._payoutPreflight = options.payoutPreflight;
+    this._store = options.store;
+  }
+
+  /** Loads rewards and queue configs from the store into memory. Call once at start. */
+  public async hydrate(): Promise<void> {
+    if (!this._store) return;
+    for (const config of await this._store.listQueueConfigs()) this._queueConfigs.set(config.queueId, config);
+    for (const record of await this._store.listRewards()) this._rewards.set(record.id, record);
   }
 
   public getClient(): IncentivePoolClient {
@@ -100,6 +108,8 @@ export class IncentiveService {
    */
   public setQueueConfig(config: QueueIncentiveConfig): void {
     this._queueConfigs.set(config.queueId, config);
+    // Write-through; a failing store must not lose the in-memory config, so errors are surfaced to the console.
+    void this._store?.saveQueueConfig(config).catch((err) => console.error('[IncentiveService] saveQueueConfig failed:', err));
   }
 
   /**
@@ -161,11 +171,16 @@ export class IncentiveService {
       throw new Error(`Participant not eligible for reward: ${eligibility.reason}`);
     }
 
-    // Trustline / funded-account preflight (#1364): nothing is recorded or submitted if it fails.
-    await this._payoutPreflight?.({ recipient, asset: config.asset, amount: config.rewardAmount });
+    const idempotencyKey = params.idempotencyKey || `qreward:${userId}:${queueId}`;
+
+    // With a durable store, a repeated key returns the reward already recorded (survives restarts).
+    if (this._store) {
+      const existingId = await this._store.getRewardIdByIdempotencyKey(idempotencyKey);
+      const existing = existingId ? this._rewards.get(existingId) : undefined;
+      if (existing) return existing;
+    }
 
     const rewardId = newId('reward');
-    const idempotencyKey = params.idempotencyKey || `qreward:${userId}:${queueId}`;
 
     const record: RewardRecord = {
       id: rewardId,
@@ -178,6 +193,7 @@ export class IncentiveService {
       createdAt: Date.now(),
     };
     this._rewards.set(rewardId, record);
+    await this._store?.saveReward(record, idempotencyKey);
 
     this._metrics.recordAttempt();
     const startTime = Date.now();
@@ -215,12 +231,14 @@ export class IncentiveService {
       RewardNotifier.getInstance().notifyConfirmed(record);
 
       this._metrics.recordSuccess(Date.now() - startTime);
+      await this._store?.saveReward(record, idempotencyKey);
 
       return record;
     } catch (err: unknown) {
       record.status = 'failed';
       record.error = err instanceof Error ? err.message : 'Unknown distribution failure';
       this._metrics.recordFailure(record.error, Date.now() - startTime);
+      await this._store?.saveReward(record, idempotencyKey).catch(() => undefined);
       throw err;
     }
   }
@@ -277,11 +295,13 @@ export class IncentiveService {
       RewardNotifier.getInstance().notifyConfirmed(record);
 
       this._metrics.recordSuccess(Date.now() - startTime);
+      await this._store?.saveReward(record);
 
       return record;
     } catch (err: unknown) {
       record.status = 'failed';
       record.error = err instanceof Error ? err.message : 'Retry distribution failure';
+      await this._store?.saveReward(record).catch(() => undefined);
       this._metrics.recordFailure(record.error, Date.now() - startTime);
       throw err;
     }
@@ -358,6 +378,13 @@ export class IncentiveService {
 
   public getReward(rewardId: string): RewardRecord | null {
     return this._rewards.get(rewardId) || null;
+  }
+
+  /** Rewards for one user, newest first. */
+  public getUserRewards(userId: string): RewardRecord[] {
+    return Array.from(this._rewards.values())
+      .filter((r) => r.userId === userId)
+      .sort((a, b) => b.createdAt - a.createdAt);
   }
 
   public getAllRewards(): RewardRecord[] {
