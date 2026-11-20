@@ -2,7 +2,7 @@
   "name": "qyou-hackathon-starter",
   "version": "0.1.0",
   "private": true,
-  "description": "Foundation monorepo for the Qyou hackathon starter — monorepo setup and authentication only.",
+  "description": "Foundation monorepo for the Qyou hackathon starter \u2014 monorepo setup and authentication only.",
   "license": "MIT",
   "workspaces": [
     "apps/*",
@@ -25,9 +25,15 @@
     "test:ci-phase3-pipeline": "node --import tsx scripts/__tests__/ci-pipeline-phase3.test.ts",
     "validate:ci-stability": "node --import tsx scripts/__tests__/ci-pipeline-stability.test.ts",
     "ci-harden:check": "node --import tsx scripts/ci-pipeline-hardening.ts",
-    "test:lint-contract": "node --import tsx scripts/__tests__/lint-typecheck-contract.test.ts"
+    "test:lint-contract": "node --import tsx scripts/__tests__/lint-typecheck-contract.test.ts",
+    "test:client-contract": "node --import tsx scripts/__tests__/client-openapi-contract.test.ts",
+    "check:client-contract": "node --import tsx scripts/client-openapi-contract.ts",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "npm run build && changeset tag"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.0",
     "@eslint/js": "^9.17.0",
     "concurrently": "^9.0.1",
     "eslint": "^9.17.0",
