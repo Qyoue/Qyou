@@ -2,15 +2,15 @@
   "name": "qyou-hackathon-starter",
   "version": "0.1.0",
   "private": true,
-  "description": "Foundation monorepo for the Qyou hackathon starter — monorepo setup and authentication only.",
+  "description": "Foundation monorepo for the Qyou hackathon starter \u2014 monorepo setup and authentication only.",
   "license": "MIT",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "npm run build -w @qyou/shared -w @qyou/stellar",
-    "build": "npm run build -w @qyou/shared -w @qyou/stellar && npm run build --workspaces --if-present",
+    "postinstall": "npm run build -w @qyou/error-codes -w @qyou/shared -w @qyou/stellar",
+    "build": "npm run build -w @qyou/error-codes -w @qyou/shared -w @qyou/stellar && npm run build --workspaces --if-present",
     "dev": "concurrently -n api,web,mobile \"npm run dev -w @qyou/api\" \"npm run dev -w @qyou/web\" \"npm run dev -w @qyou/mobile\"",
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write .",

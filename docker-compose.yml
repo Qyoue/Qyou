@@ -1,0 +1,55 @@
+# Local full-stack development: docker compose up --build
+# Web http://localhost:3000, API http://localhost:4000, Postgres localhost:5432.
+# Development defaults only; use docker-compose.staging.yml / real secrets elsewhere.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qyou
+      POSTGRES_PASSWORD: qyou
+      POSTGRES_DB: qyou
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qyou -d qyou"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      NODE_ENV: development
+      DATABASE_URL: postgresql://qyou:qyou@postgres:5432/qyou?schema=public
+      JWT_SECRET: ${JWT_SECRET:-local-dev-jwt-secret-change-me-32-chars-min}
+      JWT_EXPIRES_IN: 1h
+      BCRYPT_SALT_ROUNDS: 12
+      STELLAR_NETWORK: TESTNET
+    ports:
+      - "4000:4000"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+        NEXT_PUBLIC_STELLAR_NETWORK: TESTNET
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:

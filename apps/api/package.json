@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
+    "@qyou/error-codes": "*",
     "@qyou/shared": "*",
     "@qyou/stellar": "*",
     "bcryptjs": "^2.4.3",
