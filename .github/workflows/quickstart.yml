@@ -1,0 +1,26 @@
+name: Quickstart Integration Suite
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: quickstart-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quickstart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Quickstart suite (fails on skipped tests)
+        run: scripts/runQuickstartSuite.sh
