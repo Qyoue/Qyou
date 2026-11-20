@@ -39,6 +39,8 @@ export interface IncentiveServiceOptions {
   readonly internalTriggerSecret?: string;
   readonly allowMainnet?: boolean;
   readonly metrics?: DistributionMetricsCollector;
+  /** Runs before each payout; throw (for example `PayoutPreflightError`) to stop it (#1364). */
+  readonly payoutPreflight?: (params: { recipient: string; asset: string; amount: string }) => Promise<void>;
 }
 
 export class IncentiveService {
@@ -51,6 +53,7 @@ export class IncentiveService {
   private readonly _allowMainnet?: boolean;
   private readonly _adminSignerKey?: string;
   private readonly _metrics: DistributionMetricsCollector;
+  private readonly _payoutPreflight?: IncentiveServiceOptions['payoutPreflight'];
   private readonly _queueConfigs = new Map<string, QueueIncentiveConfig>();
   private readonly _rewards = new Map<string, RewardRecord>();
 
@@ -73,6 +76,7 @@ export class IncentiveService {
     this._internalTriggerSecret = options.internalTriggerSecret;
     this._allowMainnet = options.allowMainnet;
     this._metrics = options.metrics || DistributionMetricsCollector.getInstance();
+    this._payoutPreflight = options.payoutPreflight;
   }
 
   public getClient(): IncentivePoolClient {
@@ -156,6 +160,9 @@ export class IncentiveService {
     if (!eligibility.eligible) {
       throw new Error(`Participant not eligible for reward: ${eligibility.reason}`);
     }
+
+    // Trustline / funded-account preflight (#1364): nothing is recorded or submitted if it fails.
+    await this._payoutPreflight?.({ recipient, asset: config.asset, amount: config.rewardAmount });
 
     const rewardId = newId('reward');
     const idempotencyKey = params.idempotencyKey || `qreward:${userId}:${queueId}`;
