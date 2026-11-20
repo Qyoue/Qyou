@@ -1,5 +1,5 @@
 import { WalletService } from '@qyou/stellar';
-import type { WalletAccount, WalletBalances } from '@qyou/stellar';
+import type { RewardRecord, WalletAccount, WalletBalances } from '@qyou/stellar';
 import type { StellarRepository } from '../repositories/stellar.repository.js';
 import type {
   LinkWalletInput,
@@ -16,11 +16,35 @@ import {
 } from '../../../shared/errors/index.js';
 import { logger } from '../../../shared/logger/index.js';
 
+/** Anything that can list a user's rewards (the incentive service, or a database-backed store). */
+export interface RewardSource {
+  getUserRewards(userId: string): RewardRecord[] | Promise<RewardRecord[]>;
+}
+
+export interface RewardHistoryPage {
+  rewards: RewardHistoryItem[];
+  nextCursor: string | null;
+}
+
+export interface RewardHistoryItem {
+  id: string;
+  queueId: string;
+  amount: string;
+  asset: string;
+  status: string;
+  transactionHash?: string;
+  createdAt: string;
+  confirmedAt?: string;
+}
+
 export class StellarApiService {
   private readonly _repository: StellarRepository;
   private readonly _walletService: WalletService;
 
-  constructor(repository: StellarRepository, walletService?: WalletService) {
+  private readonly _rewardSource?: RewardSource;
+
+  constructor(repository: StellarRepository, walletService?: WalletService, rewardSource?: RewardSource) {
+    this._rewardSource = rewardSource;
     this._repository = repository;
     this._walletService = walletService ?? new WalletService();
   }
@@ -130,5 +154,34 @@ export class StellarApiService {
 
   public async getAuditLogs(userId?: string): Promise<StellarAuditLogEntry[]> {
     return this._repository.getAuditLogs(userId);
+  }
+
+  /**
+   * The caller's reward history, newest first, as an offset-cursor page. Only the
+   * caller's own rewards are ever returned; internal fields (recipient address,
+   * error details) are not exposed.
+   */
+  public async getRewardHistory(
+    userId: string,
+    opts: { limit: number; cursor?: number },
+  ): Promise<RewardHistoryPage> {
+    const all = this._rewardSource ? await this._rewardSource.getUserRewards(userId) : [];
+    const mine = all.filter((r) => r.userId === userId).sort((a, b) => b.createdAt - a.createdAt);
+    const start = opts.cursor ?? 0;
+    const slice = mine.slice(start, start + opts.limit);
+    const next = start + opts.limit < mine.length ? String(start + opts.limit) : null;
+    return {
+      rewards: slice.map((r) => ({
+        id: r.id,
+        queueId: r.queueId,
+        amount: r.amount,
+        asset: r.asset,
+        status: r.status,
+        transactionHash: r.transactionHash,
+        createdAt: new Date(r.createdAt).toISOString(),
+        confirmedAt: r.confirmedAt ? new Date(r.confirmedAt).toISOString() : undefined,
+      })),
+      nextCursor: next,
+    };
   }
 }
