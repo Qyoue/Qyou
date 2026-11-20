@@ -17,6 +17,15 @@ export default tseslint.config(
     ],
   },
   js.configs.recommended,
+  {
+    rules: {
+      // IDs, keys and tokens must come from crypto (randomUUID / getRandomValues) (#1358).
+      'no-restricted-properties': [
+        'error',
+        { object: 'Math', property: 'random', message: 'Use crypto.randomUUID() or crypto.getRandomValues().' },
+      ],
+    },
+  },
   ...tseslint.configs.recommended,
   prettier,
   {

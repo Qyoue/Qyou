@@ -49,6 +49,8 @@ export class HorizonClientWrapper {
                 }
 
                 // Wait with exponential backoff and jitter
+                // Retry jitter only; not security-sensitive.
+                // eslint-disable-next-line no-restricted-properties
                 const jitter = Math.random() * 100;
                 await new Promise((resolve) => setTimeout(resolve, backoff + jitter));
                 backoff *= 2; // Exponential increase

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { WalletAccount } from '@qyou/stellar';
 import type { StellarAuditLogEntry } from '../types/stellar.types.js';
 
@@ -38,7 +39,7 @@ export class InMemoryStellarRepository implements StellarRepository {
 
   public async recordAuditLog(entry: Omit<StellarAuditLogEntry, 'id'>): Promise<StellarAuditLogEntry> {
     const fullEntry: StellarAuditLogEntry = {
-      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      id: `audit-${randomUUID()}`,
       ...entry,
     };
     this._auditLogs.push(fullEntry);
