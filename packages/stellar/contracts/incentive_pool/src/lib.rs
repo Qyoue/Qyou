@@ -13,6 +13,9 @@ pub enum Error {
     Unauthorized = 3,
     InsufficientBalance = 4,
     InvalidAmount = 5,
+    Paused = 6,
+    CapExceeded = 7,
+    NoPendingAdmin = 8,
 }
 
 #[contracttype]
@@ -22,6 +25,10 @@ pub enum DataKey {
     Token,
     Balance,
     UpgradeAdmin,
+    Paused,
+    /// Largest amount a single `distribute` call may pay out (0 / unset = no cap).
+    MaxPerCall,
+    PendingAdmin,
 }
 
 #[contract]
@@ -85,6 +92,14 @@ impl IncentivePoolContract {
         if amount <= 0 {
             return Err(Error::InvalidAmount);
         }
+        if env.storage().instance().get::<_, bool>(&DataKey::Paused).unwrap_or(false) {
+            return Err(Error::Paused);
+        }
+        if let Some(cap) = env.storage().instance().get::<_, i128>(&DataKey::MaxPerCall) {
+            if cap > 0 && amount > cap {
+                return Err(Error::CapExceeded);
+            }
+        }
 
         let admin: Address = env
             .storage()
@@ -115,6 +130,79 @@ impl IncentivePoolContract {
         Ok(new_balance)
     }
 
+    /// Pauses distributions (admin only). Deposits and reads keep working.
+    pub fn pause(env: Env, caller: Address) -> Result<(), Error> {
+        Self::require_admin(&env, &caller)?;
+        env.storage().instance().set(&DataKey::Paused, &true);
+        env.events().publish((symbol_short!("paused"), caller), true);
+        Ok(())
+    }
+
+    /// Resumes distributions (admin only).
+    pub fn unpause(env: Env, caller: Address) -> Result<(), Error> {
+        Self::require_admin(&env, &caller)?;
+        env.storage().instance().set(&DataKey::Paused, &false);
+        env.events().publish((symbol_short!("paused"), caller), false);
+        Ok(())
+    }
+
+    pub fn is_paused(env: Env) -> bool {
+        env.storage().instance().get(&DataKey::Paused).unwrap_or(false)
+    }
+
+    /// Sets the largest amount one `distribute` call may pay (admin only). 0 removes the cap.
+    pub fn set_max_per_call(env: Env, caller: Address, max_amount: i128) -> Result<(), Error> {
+        Self::require_admin(&env, &caller)?;
+        if max_amount < 0 {
+            return Err(Error::InvalidAmount);
+        }
+        env.storage().instance().set(&DataKey::MaxPerCall, &max_amount);
+        Ok(())
+    }
+
+    pub fn get_max_per_call(env: Env) -> i128 {
+        env.storage().instance().get(&DataKey::MaxPerCall).unwrap_or(0)
+    }
+
+    /// Step one of an admin handover: the current admin nominates a successor.
+    pub fn propose_admin(env: Env, caller: Address, new_admin: Address) -> Result<(), Error> {
+        Self::require_admin(&env, &caller)?;
+        env.storage().instance().set(&DataKey::PendingAdmin, &new_admin);
+        env.events().publish((symbol_short!("adm_prop"), caller), new_admin);
+        Ok(())
+    }
+
+    /// Step two: the nominated address accepts and becomes the admin, so a typo in
+    /// the proposal cannot hand the pool to an address nobody controls.
+    pub fn accept_admin(env: Env, new_admin: Address) -> Result<(), Error> {
+        let pending: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::PendingAdmin)
+            .ok_or(Error::NoPendingAdmin)?;
+        if new_admin != pending {
+            return Err(Error::Unauthorized);
+        }
+        new_admin.require_auth();
+        env.storage().instance().set(&DataKey::Admin, &new_admin);
+        env.storage().instance().remove(&DataKey::PendingAdmin);
+        env.events().publish((symbol_short!("adm_done"),), new_admin);
+        Ok(())
+    }
+
+    /// Cancels a pending handover (admin only).
+    pub fn cancel_admin_proposal(env: Env, caller: Address) -> Result<(), Error> {
+        Self::require_admin(&env, &caller)?;
+        env.storage().instance().remove(&DataKey::PendingAdmin);
+        Ok(())
+    }
+
+    /// Extends the contract instance TTL so the pool does not expire (#1366). Anyone may call it
+    /// (the caller pays); it only ever extends. `threshold` and `extend_to` are in ledgers.
+    pub fn extend_instance_ttl(env: Env, threshold: u32, extend_to: u32) {
+        env.storage().instance().extend_ttl(threshold, extend_to);
+    }
+
     /// Returns the current total balance held by the incentive pool.
     pub fn get_balance(env: Env) -> i128 {
         env.storage().instance().get(&DataKey::Balance).unwrap_or(0)
@@ -123,6 +211,19 @@ impl IncentivePoolContract {
     /// Returns the admin address authorized to distribute rewards.
     pub fn get_admin(env: Env) -> Result<Address, Error> {
         env.storage().instance().get(&DataKey::Admin).ok_or(Error::NotInitialized)
+    }
+
+    fn require_admin(env: &Env, caller: &Address) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        if *caller != admin {
+            return Err(Error::Unauthorized);
+        }
+        caller.require_auth();
+        Ok(())
     }
 
     /// Upgrades the contract WASM bytecode in-place.
