@@ -15,6 +15,22 @@ interface WalletSetupScreenProps {
   authToken?: string;
 }
 
+
+const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+/**
+ * Random Stellar-address-shaped string from a CSPRNG (`crypto.getRandomValues`).
+ * NOTE: this is a placeholder shape, not a real keypair; replace with real
+ * key generation when custodial wallet creation is implemented.
+ */
+function randomAddressLikeKey(): string {
+  const bytes = new Uint8Array(55);
+  globalThis.crypto.getRandomValues(bytes);
+  let key = 'G';
+  for (const b of bytes) key += BASE32.charAt(b % BASE32.length);
+  return key;
+}
+
 export function WalletSetupScreen({
   onSuccess,
   apiBaseUrl = 'http://localhost:4000/api/stellar',
@@ -66,12 +82,7 @@ export function WalletSetupScreen({
   };
 
   const handleCustodialCreate = () => {
-    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    let generatedKey = 'G';
-    for (let i = 0; i < 55; i++) {
-      generatedKey += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    handleLink(generatedKey);
+    handleLink(randomAddressLikeKey());
   };
 
   if (successAddress) {

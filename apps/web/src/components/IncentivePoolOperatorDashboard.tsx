@@ -75,7 +75,7 @@ export function IncentivePoolOperatorDashboard({
           ? {
               ...d,
               status: 'confirmed',
-              txHash: `0x${Math.random().toString(16).substring(2, 10)}...retry`,
+              txHash: `0x${globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 8)}...retry`,
               error: undefined,
             }
           : d,

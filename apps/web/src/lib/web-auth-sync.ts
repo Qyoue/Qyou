@@ -15,7 +15,7 @@ export function broadcastSessionEvent(event: SessionSyncEventType, userId?: stri
     event,
     timestamp: Date.now(),
     userId,
-    tabId: Math.random().toString(36).substring(2, 9),
+    tabId: globalThis.crypto.randomUUID().slice(0, 8),
   };
 
   const validation = sessionSyncMessageSchema.safeParse(payload);
