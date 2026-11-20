@@ -14,7 +14,7 @@
     "test:coverage": "c8 --reporter=text --reporter=lcov --branches=70 --lines=70 --functions=70 node --import tsx --test src/modules/auth/tests/*.test.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.1.0",
+    "@prisma/client": "^7.10.1",
     "@qyou/shared": "*",
     "@qyou/stellar": "*",
     "bcryptjs": "^2.4.3",
