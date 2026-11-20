@@ -353,6 +353,13 @@ export class IncentiveService {
     return this._rewards.get(rewardId) || null;
   }
 
+  /** Rewards for one user, newest first. */
+  public getUserRewards(userId: string): RewardRecord[] {
+    return Array.from(this._rewards.values())
+      .filter((r) => r.userId === userId)
+      .sort((a, b) => b.createdAt - a.createdAt);
+  }
+
   public getAllRewards(): RewardRecord[] {
     return Array.from(this._rewards.values());
   }

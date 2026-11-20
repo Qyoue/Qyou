@@ -8,3 +8,4 @@ export * from './transaction-watcher.js';
 export * from './wallet-challenge.service.js';
 export * from './network-guard.js';
 
+export * from './production-preflight.js';
