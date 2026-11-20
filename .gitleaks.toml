@@ -1,0 +1,12 @@
+# Default gitleaks rules plus an allowlist for documented placeholders.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Example env files and dev-only placeholders"
+paths = [
+  '''(^|/)\.env[^/]*\.example$''',
+]
+regexes = [
+  '''dev-secret-change-me''',
+]
