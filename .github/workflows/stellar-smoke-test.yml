@@ -13,12 +13,50 @@ on:
           - staging
           - production
 
+permissions:
+  contents: read
+
+concurrency:
+  group: stellar-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   smoke-test:
     name: Run Stellar Integration Smoke Tests
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success')
+    timeout-minutes: 15
+    env:
+      TARGET_ENV: ${{ inputs.target_env || 'staging' }}
+      STELLAR_NETWORK: TESTNET
+      STELLAR_HORIZON_URL: https://horizon-testnet.stellar.org
+      STELLAR_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
     steps:
+      - name: Testnet-only guard
+        run: |
+          set -euo pipefail
+          if [ "$STELLAR_NETWORK" != "TESTNET" ]; then
+            echo "::error::smoke tests are testnet-only (STELLAR_NETWORK=$STELLAR_NETWORK)"; exit 1
+          fi
+          for url in "$STELLAR_HORIZON_URL" "$STELLAR_SOROBAN_RPC_URL"; do
+            case "$url" in
+              *testnet*|*localhost*|*127.0.0.1*) ;;
+              *) echo "::error::refusing non-testnet endpoint: $url"; exit 1 ;;
+            esac
+          done
+          if [ "$TARGET_ENV" = "production" ]; then
+            echo "::notice::target_env=production only selects the deployment under test; the Stellar network stays TESTNET"
+          fi
+
+      - name: Mask secrets
+        env:
+          STELLAR_SECRET_KEY: ${{ secrets.STELLAR_SECRET_KEY }}
+          STELLAR_SIGNING_SECRET: ${{ secrets.STELLAR_SIGNING_SECRET }}
+        run: |
+          for v in "$STELLAR_SECRET_KEY" "$STELLAR_SIGNING_SECRET"; do
+            if [ -n "$v" ]; then echo "::add-mask::$v"; fi
+          done
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -38,7 +76,6 @@ jobs:
 
       - name: Execute Automated Smoke Test Suite
         env:
-          STELLAR_NETWORK: TESTNET
-          STELLAR_HORIZON_URL: https://horizon-testnet.stellar.org
-          STELLAR_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+          STELLAR_SECRET_KEY: ${{ secrets.STELLAR_SECRET_KEY }}
+          STELLAR_SIGNING_SECRET: ${{ secrets.STELLAR_SIGNING_SECRET }}
         run: npm run smoke-test -w @qyou/stellar
