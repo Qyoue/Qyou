@@ -34,4 +34,14 @@ export class AuthController {
       next(error);
     }
   };
+
+  deleteAccount = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = loginSchema.parse(req.body);
+      await this.authService.deleteAccount(input);
+      res.status(200).json({ message: 'Account deleted successfully' });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

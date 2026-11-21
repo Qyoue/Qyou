@@ -1,4 +1,5 @@
-import type { QueueApiEnvelope, QueueErrorPayload } from '@qyou/shared';
+import type { QueueApiEnvelope, QueueErrorPayload, QueueItem } from '@qyou/shared';
+import { getJson } from './api-client';
 
 export function unwrapQueueApiResponse<T>(response: QueueApiEnvelope<T>): T {
   if (!response.success || response.error) {
@@ -14,4 +15,14 @@ export function unwrapQueueApiResponse<T>(response: QueueApiEnvelope<T>): T {
   }
 
   return response.data;
+}
+
+export async function listQueues(signal?: AbortSignal): Promise<QueueItem[]> {
+  const response = await getJson<QueueApiEnvelope<QueueItem[]>>('/api/v1/queues', { signal });
+  return unwrapQueueApiResponse(response);
+}
+
+export async function getQueue(queueId: string, signal?: AbortSignal): Promise<QueueItem> {
+  const response = await getJson<QueueApiEnvelope<QueueItem>>(`/api/v1/queues/${queueId}`, { signal });
+  return unwrapQueueApiResponse(response);
 }

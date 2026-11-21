@@ -5,6 +5,7 @@ export interface AuthRepository {
   findByEmail(email: string): Promise<AuthUserRecord | null>;
   create(data: CreateUserData): Promise<AuthUserRecord>;
   deactivate(id: string): Promise<AuthUserRecord>;
+  deleteAccount(id: string): Promise<void>;
 }
 
 export class PrismaAuthRepository implements AuthRepository {
@@ -23,5 +24,12 @@ export class PrismaAuthRepository implements AuthRepository {
       where: { id },
       data: { deactivatedAt: new Date() },
     });
+  }
+
+  async deleteAccount(id: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.walletLink.deleteMany({ where: { userId: id } }),
+      this.prisma.user.delete({ where: { id } }),
+    ]);
   }
 }

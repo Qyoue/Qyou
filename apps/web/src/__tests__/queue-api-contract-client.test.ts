@@ -35,11 +35,14 @@ describe('unwrapQueueApiResponse', () => {
     expect(() => unwrapQueueApiResponse(envelope)).toThrow('no payload data');
   });
 
-  it('TODO(#833): add integration test once GET /api/v1/queue is implemented', () => {
-    // When the backend route ships:
-    // - Import the real client function (e.g. listQueues)
-    // - Call it against a test server
-    // - Assert the response matches QueueApiEnvelope<QueueListPayload>
-    expect(true).toBe(true); // placeholder — replace with real assertion
+  it('listQueues unwraps queue API envelope (#1298)', async () => {
+    jest.resetModules();
+    jest.doMock('../lib/api-client', () => ({
+      getJson: jest.fn().mockResolvedValue({ success: true, data: [{ id: 'q1', name: 'Q', category: 'bank', location: { latitude: 0, longitude: 0 }, currentWaitTimeMinutes: 1, activeCount: 1, createdAt: '2026-01-01T00:00:00.000Z' }] }),
+    }));
+    const { listQueues } = await import('../lib/queue-api-contract-client');
+    const queues = await listQueues();
+    expect(queues).toHaveLength(1);
+    expect(queues[0].id).toBe('q1');
   });
 });

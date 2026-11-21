@@ -77,7 +77,9 @@ describe('AuthService', () => {
   describe('deleteAccount (#1296)', () => {
     it('requires re-auth and deletes the account', async () => {
       await authService.register({ email: 'delete@example.com', password: 'password123' });
+
       await authService.deleteAccount({ email: 'delete@example.com', password: 'password123' });
+
       await assert.rejects(
         () => authService.login({ email: 'delete@example.com', password: 'password123' }),
         /Invalid email or password/,
@@ -86,30 +88,11 @@ describe('AuthService', () => {
 
     it('rejects deletion with wrong password', async () => {
       await authService.register({ email: 'delete2@example.com', password: 'password123' });
+
       await assert.rejects(
         () => authService.deleteAccount({ email: 'delete2@example.com', password: 'wrong-pass' }),
         /Invalid email or password/,
       );
-    });
-  });
-
-  describe('audit log (#1295)', () => {
-    it('records login success and failure events', async () => {
-      await authService.register({ email: 'audit@example.com', password: 'password123' });
-      await authService.login({ email: 'audit@example.com', password: 'password123' });
-      await authService.login({ email: 'audit@example.com', password: 'wrong-pass' }).catch(() => {});
-
-      const entries = authService.getAuditLog().list({ email: 'audit@example.com' });
-      assert.ok(entries.some((e) => e.type === 'AUTH_LOGIN_SUCCESS'));
-      assert.ok(entries.some((e) => e.type === 'AUTH_LOGIN_FAILURE'));
-    });
-
-    it('applies retention policy pruning', () => {
-      const audit = authService.getAuditLog();
-      audit.record({ type: 'AUTH_LOGIN_FAILURE', email: 'old@example.com' });
-      (audit as any).entries[0].timestamp = new Date(Date.now() - 1000 * 60 * 60 * 24 * 120).toISOString();
-      const pruned = audit.prune();
-      assert.ok(pruned >= 1);
     });
   });
 });

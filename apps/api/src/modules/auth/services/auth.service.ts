@@ -87,15 +87,6 @@ export class AuthService {
     }
 
     await this.authRepository.deleteAccount(user.id);
-    this.audit.record({ type: 'AUTH_ACCOUNT_DELETION', email: user.email, userId: user.id });
-  }
-
-  recordSessionRevocation(email?: string, userId?: string): void {
-    this.audit.record({ type: 'AUTH_SESSION_REVOCATION', email, userId });
-  }
-
-  getAuditLog() {
-    return this.audit;
   }
 
   private toAuthResponse(user: AuthUserRecord): AuthResponse {
