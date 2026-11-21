@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
+      document.cookie = 'qyou_auth=1; path=/; SameSite=Lax';
     }
   }, []);
 
@@ -81,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(STORAGE_KEY);
+      document.cookie = 'qyou_auth=; path=/; Max-Age=0; SameSite=Lax';
     }
   }, []);
 
