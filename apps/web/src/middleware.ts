@@ -1,50 +1,21 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-function getApiConnectSrc(): string {
-  const raw = process.env.NEXT_PUBLIC_API_URL;
-  if (!raw) return "'self'";
-  try {
-    const url = new URL(raw);
-    return `'self' ${url.origin}`;
-  } catch {
-    return "'self'";
-  }
-}
+const PROTECTED_PREFIXES = ['/queue', '/settings', '/operator', '/onboarding'];
 
 export function middleware(request: NextRequest) {
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
-  const connectSrc = getApiConnectSrc();
-  const cspReportOnly = [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    `connect-src ${connectSrc}`,
-    "font-src 'self' data:",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "frame-ancestors 'none'",
-  ].join('; ');
+  const { pathname } = request.nextUrl;
+  const isProtected = PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  if (!isProtected) return NextResponse.next();
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-nonce', nonce);
-  requestHeaders.set('Content-Security-Policy-Report-Only', cspReportOnly);
+  const hasAuth = request.cookies.get('qyou_auth')?.value === '1';
+  if (hasAuth) return NextResponse.next();
 
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.headers.set('Content-Security-Policy-Report-Only', cspReportOnly);
-  response.headers.set('x-nonce', nonce);
-  return response;
+  const loginUrl = new URL('/login', request.url);
+  loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
-  matcher: [
-    {
-      source: '/((?!_next/static|_next/image|favicon.ico).*)',
-      missing: [
-        { type: 'header', key: 'next-router-prefetch' },
-        { type: 'header', key: 'purpose', value: 'prefetch' },
-      ],
-    },
-  ],
+  matcher: ['/queue/:path*', '/settings/:path*', '/operator/:path*', '/onboarding/:path*'],
 };

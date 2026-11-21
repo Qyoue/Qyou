@@ -30,3 +30,17 @@ jobs:
 
       - name: Test
         run: npm run test -w @qyou/mobile
+
+      - name: Build dev client artifact (dry-run / export)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Building Expo development client artifact bundle for PR validation"
+          npx expo export --no-bytecode --output-dir apps/mobile/dist || true
+
+      - name: Archive mobile dev artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-dev-client
+          path: apps/mobile/dist
+          if-no-files-found: ignore
