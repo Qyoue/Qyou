@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import styles from './Toast.module.css';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -18,10 +19,10 @@ interface ToastProps {
 
 export function Toast({ message, type, onClose }: ToastProps) {
   return (
-    <div className={`toast toast-${type}`} role="alert" aria-live="polite">
+    <div className={`toast toast-${type} ${styles.toast} ${styles[type]}`} role="alert" aria-live="polite">
       <span>{message}</span>
       {onClose && (
-        <button type="button" onClick={onClose} aria-label="Dismiss notification">
+        <button type="button" onClick={onClose} aria-label="Dismiss notification" className={styles.close}>
           ×
         </button>
       )}
@@ -57,9 +58,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div aria-live="polite" aria-atomic="true" style={{ position: 'fixed', right: 16, bottom: 16, zIndex: 9999 }}>
+      <div aria-live="polite" aria-atomic="true" className={styles.container}>
         {toasts.map((t) => (
-          <div key={t.id} style={{ marginTop: 8 }}>
+          <div key={t.id} className={styles.item}>
             <Toast message={t.message} type={t.type} onClose={() => dismissToast(t.id)} />
           </div>
         ))}
