@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { AuthResponse, AuthUser } from '@qyou/shared';
+import { useToast } from '../components/Toast';
 import { login as loginRequest, register as registerRequest } from './api-client';
 
 interface AuthContextValue {
@@ -21,6 +22,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onExpired = () => {
+      setUser(null);
+      setAccessToken(null);
+      window.localStorage.removeItem(STORAGE_KEY);
+      showToast('Your session has expired. Please sign in again.', 'error');
+    };
+    window.addEventListener('qyou:session-expired', onExpired as EventListener);
+    return () => window.removeEventListener('qyou:session-expired', onExpired as EventListener);
+  }, [showToast]);
 
   const persist = useCallback((result: AuthResponse) => {
     setUser(result.user);
@@ -36,6 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       try {
         persist(await loginRequest({ email, password }));
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Unable to sign in.', 'error');
+        throw err;
       } finally {
         setIsLoading(false);
       }
@@ -48,6 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       try {
         persist(await registerRequest({ email, password }));
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Unable to create account.', 'error');
+        throw err;
       } finally {
         setIsLoading(false);
       }
