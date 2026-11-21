@@ -1,23 +1,42 @@
-/* globals.css — only styles consumed by Button, TextField, Spinner, AuthForm,
-   not-found, and error pages. All unused Next.js starter defaults removed (#842). */
-
+/* Theme tokens - light default, dark via prefers-color-scheme */
 :root {
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  color-scheme: light;
+  --color-bg: #f5f5f7;
+  --color-surface: #ffffff;
+  --color-text: #1a1a1a;
+  --color-muted: #555;
+  --color-border: #d0d0d5;
+  --color-danger: #b3261e;
+  --color-danger-contrast: #d33b3b;
+  --color-primary: #1a1a1a;
+  --color-primary-text: #ffffff;
+  --color-focus: #2563eb;
+  --shadow-surface: 0 2px 12px rgba(0, 0, 0, 0.08);
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #111315;
+    --color-surface: #1c1f24;
+    --color-text: #f3f4f6;
+    --color-muted: #c3cad5;
+    --color-border: #3a404a;
+    --color-danger: #ffb4ab;
+    --color-danger-contrast: #ffb4ab;
+    --color-primary: #f3f4f6;
+    --color-primary-text: #111315;
+    --color-focus: #93c5fd;
+    --shadow-surface: 0 2px 12px rgba(0, 0, 0, 0.4);
+  }
 }
 
 body {
   margin: 0;
-  background: #f5f5f7;
-  color: #1a1a1a;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
-/* Layout used by AuthForm, not-found, and error pages */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -29,85 +48,53 @@ body {
 .auth-form {
   width: 100%;
   max-width: 360px;
-  background: #ffffff;
+  background: var(--color-surface);
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-surface);
   padding: 2rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.auth-form h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
+.auth-form h1 { margin: 0; font-size: 1.5rem; }
 
-/* TextField */
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.field label {
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
+.field { display: flex; flex-direction: column; gap: 0.25rem; }
+.field label { font-size: 0.875rem; font-weight: 600; }
 .field input {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d0d0d5;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 1rem;
+  background: var(--color-surface);
+  color: var(--color-text);
 }
+.field input[aria-invalid='true'] { border-color: var(--color-danger-contrast); }
 
-.field input[aria-invalid='true'] {
-  border-color: #d33b3b;
-}
+.field-error, .form-error { color: var(--color-danger-contrast); font-size: 0.8125rem; margin: 0; }
 
-/* FormError */
-.field-error,
-.form-error {
-  color: #d33b3b;
-  font-size: 0.8125rem;
-  margin: 0;
-}
-
-/* Button */
 .auth-form button[type='submit'] {
   padding: 0.625rem 1rem;
   border: none;
   border-radius: 8px;
-  background: #1a1a1a;
-  color: #ffffff;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
   font-size: 1rem;
   cursor: pointer;
 }
+.auth-form button[type='submit']:disabled { opacity: 0.7; cursor: not-allowed; }
+.auth-form-footer { font-size: 0.875rem; text-align: center; }
 
-.auth-form button[type='submit']:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.auth-form-footer {
-  font-size: 0.875rem;
-  text-align: center;
-}
-
-/* Spinner */
 .spinner {
   display: inline-block;
   width: 1rem;
   height: 1rem;
   border: 2px solid rgba(255, 255, 255, 0.4);
-  border-top-color: #ffffff;
+  border-top-color: currentColor;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
