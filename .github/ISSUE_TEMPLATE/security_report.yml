@@ -1,0 +1,26 @@
+name: Security hardening (non-sensitive)
+description: A hardening task or security improvement that is safe to discuss in public. Report vulnerabilities privately instead.
+title: "[security] "
+labels: [security]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not use this form for a vulnerability.** Report it privately through
+        [GitHub Security Advisories](https://github.com/Qyoue/Qyou/security/advisories/new) (see SECURITY.md).
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk or weakness
+    validations:
+      required: true
+  - type: textarea
+    id: control
+    attributes:
+      label: Proposed control
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or tests required

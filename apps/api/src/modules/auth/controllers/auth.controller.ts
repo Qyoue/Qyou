@@ -24,4 +24,12 @@ export class AuthController {
       next(error);
     }
   };
+
+  logout = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(200).json({ message: 'Logged out successfully' });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

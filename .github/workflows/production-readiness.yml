@@ -1,0 +1,32 @@
+name: Production readiness
+
+on:
+  push:
+    branches: ["release/**"]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Readiness gate
+        env:
+          NODE_ENV: production
+          STELLAR_DISTRIBUTION_SECRET_KEY: ${{ secrets.STELLAR_DISTRIBUTION_SECRET_KEY }}
+          KILL_SWITCH_STORAGE: ${{ vars.KILL_SWITCH_STORAGE }}
+          SECRETS_PROVIDER: ${{ vars.SECRETS_PROVIDER }}
+          STELLAR_NETWORK: ${{ vars.STELLAR_NETWORK }}
+          STELLAR_ALLOW_MAINNET: ${{ vars.STELLAR_ALLOW_MAINNET }}
+        run: node --import tsx scripts/productionReadinessGate.ts

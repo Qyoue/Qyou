@@ -2,6 +2,7 @@ export interface AuthUserRecord {
   id: string;
   email: string;
   passwordHash: string;
+  deactivatedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

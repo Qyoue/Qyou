@@ -1,3 +1,6 @@
+/* globals.css — only styles consumed by Button, TextField, Spinner, AuthForm,
+   not-found, and error pages. All unused Next.js starter defaults removed (#842). */
+
 :root {
   font-family:
     system-ui,
@@ -14,6 +17,7 @@ body {
   color: #1a1a1a;
 }
 
+/* Layout used by AuthForm, not-found, and error pages */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -39,6 +43,7 @@ body {
   font-size: 1.5rem;
 }
 
+/* TextField */
 .field {
   display: flex;
   flex-direction: column;
@@ -61,6 +66,7 @@ body {
   border-color: #d33b3b;
 }
 
+/* FormError */
 .field-error,
 .form-error {
   color: #d33b3b;
@@ -68,6 +74,7 @@ body {
   margin: 0;
 }
 
+/* Button */
 .auth-form button[type='submit'] {
   padding: 0.625rem 1rem;
   border: none;
@@ -88,6 +95,7 @@ body {
   text-align: center;
 }
 
+/* Spinner */
 .spinner {
   display: inline-block;
   width: 1rem;

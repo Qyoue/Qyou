@@ -1,0 +1,77 @@
+name: Contract Build
+
+on:
+  push:
+    paths:
+      - "packages/stellar/contracts/**"
+      - "packages/stellar/rust-toolchain.toml"
+      - "packages/stellar/scripts/*.sh"
+      - ".github/workflows/contract-build.yml"
+  pull_request:
+    paths:
+      - "packages/stellar/contracts/**"
+      - "packages/stellar/rust-toolchain.toml"
+      - "packages/stellar/scripts/*.sh"
+      - ".github/workflows/contract-build.yml"
+
+concurrency:
+  group: contract-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: cargo test / clippy / WASM size
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: packages/stellar/contracts/incentive_pool
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned toolchain (rust-toolchain.toml)
+        working-directory: packages/stellar
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          rustup component add clippy
+          rustup target add wasm32-unknown-unknown
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/stellar/contracts/incentive_pool/target
+          key: contract-${{ runner.os }}-${{ hashFiles('packages/stellar/contracts/incentive_pool/Cargo.lock') }}
+
+      - name: Tests
+        run: cargo test --locked
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Reproducible WASM build (twice, hashes must match)
+        working-directory: .
+        run: |
+          set -euo pipefail
+          a=$(packages/stellar/scripts/build-wasm.sh | awk '/^sha256/{print $2}')
+          rm -rf packages/stellar/contracts/incentive_pool/target/wasm32-unknown-unknown
+          b=$(packages/stellar/scripts/build-wasm.sh | awk '/^sha256/{print $2}')
+          echo "first=$a second=$b"
+          test "$a" = "$b"
+
+      - name: Compare with the recorded hash (once WASM_HASH is recorded)
+        working-directory: .
+        run: |
+          set +e
+          packages/stellar/scripts/build-wasm.sh --check
+          code=$?
+          # exit 2 means no hash is recorded yet; anything else non-zero is a real mismatch
+          if [ "$code" -ne 0 ] && [ "$code" -ne 2 ]; then exit "$code"; fi
+
+      - name: WASM size check
+        working-directory: .
+        run: packages/stellar/scripts/check-wasm-size.sh
