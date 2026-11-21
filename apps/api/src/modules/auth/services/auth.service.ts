@@ -66,6 +66,20 @@ export class AuthService {
     await this.authRepository.deactivate(id);
   }
 
+  async deleteAccount(input: LoginInput): Promise<void> {
+    const user = await this.authRepository.findByEmail(input.email);
+    if (!user) {
+      throw new UnauthorizedError('Invalid email or password.');
+    }
+
+    const isValidPassword = await bcrypt.compare(input.password, user.passwordHash);
+    if (!isValidPassword) {
+      throw new UnauthorizedError('Invalid email or password.');
+    }
+
+    await this.authRepository.deleteAccount(user.id);
+  }
+
   private toAuthResponse(user: AuthUserRecord): AuthResponse {
     const accessToken = jwt.sign({ sub: user.id, email: user.email }, env.JWT_SECRET, {
       expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],

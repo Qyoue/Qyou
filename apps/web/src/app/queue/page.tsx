@@ -1,47 +1,46 @@
 'use client';
 
-import { useState } from 'react';
-import type { QueueCategory } from '@qyou/shared';
-import { QueueFilterBar } from '../../components/QueueFilterBar';
-import { QueueModerationBar } from '../../components/QueueModerationBar';
-import { QueueMembershipBadge } from '../../components/QueueMembershipBadge';
-import { RealTimeWaitTimeCard } from '../../components/RealTimeWaitTimeCard';
-
-// TODO(#833): wire to queue-api-contract-client once backend queue API ships.
-// Currently renders with placeholder/demo data.
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import type { QueueItem } from '@qyou/shared';
+import { listQueues } from '../../lib/queue-api-contract-client';
 
 export default function QueuePage() {
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<QueueCategory | undefined>(undefined);
+  const [queues, setQueues] = useState<QueueItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    listQueues(controller.signal)
+      .then((data) => setQueues(data))
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : 'Failed to load queues.');
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, []);
 
   return (
-    <main style={{ maxWidth: '640px', margin: '2rem auto', padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Queue</h1>
+    <main style={{ maxWidth: '720px', margin: '2rem auto', padding: '0 1rem', display: 'grid', gap: '1rem' }}>
+      <h1 style={{ margin: 0 }}>Queues</h1>
 
-      <QueueFilterBar
-        onSearchChange={setSearch}
-        onCategoryChange={setCategory}
-      />
+      {loading && <p role="status">Loading queues...</p>}
+      {error && <p role="alert">{error}</p>}
+      {!loading && !error && queues.length === 0 && <p>No queues available.</p>}
 
-      <RealTimeWaitTimeCard
-        averageWaitMinutes={12}
-        reportsCount={8}
-        confidenceScore={75}
-      />
-
-      <QueueMembershipBadge positionNumber={3} role="member" />
-
-      <QueueModerationBar
-        queueId="demo"
-        isPaused={false}
-        onAction={(action) => console.log('Moderation action:', action)}
-      />
-
-      {/* Debug: show active filters */}
-      {(search || category) && (
-        <p style={{ fontSize: '0.8125rem', color: '#666' }}>
-          Filtering by: {[search && `"${search}"`, category].filter(Boolean).join(', ')}
-        </p>
+      {!loading && !error && queues.length > 0 && (
+        <ul style={{ display: 'grid', gap: 12, padding: 0, listStyle: 'none' }}>
+          {queues.map((q) => (
+            <li key={q.id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12 }}>
+              <Link href={`/queue/${q.id}`}><strong>{q.name}</strong></Link>
+              <div>{q.category} · {q.activeCount} active · ~{q.currentWaitTimeMinutes} min wait</div>
+            </li>
+          ))}
+        </ul>
       )}
     </main>
   );
