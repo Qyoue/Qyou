@@ -2,14 +2,19 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { registerSchema } from '@qyou/shared';
 import { AuthForm } from '../../components/AuthForm';
 import { AuthStatus } from '../../components/AuthStatus';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
+import { getSafeNextPath } from '../../lib/safe-next';
 
 export default function RegisterPage() {
   const { user, register, logout, isLoading } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = getSafeNextPath(searchParams.get('next'));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -37,6 +42,7 @@ export default function RegisterPage() {
 
     try {
       await register(result.data.email, result.data.password);
+      router.replace(nextPath);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Unable to create account.');
     }
@@ -51,7 +57,7 @@ export default function RegisterPage() {
       error={formError}
       footer={
         <p>
-          Already have an account? <Link href="/login">Log in</Link>
+          Already have an account? <Link href={`/login?next=${encodeURIComponent(nextPath)}`}>Log in</Link>
         </p>
       }
     >
