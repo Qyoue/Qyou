@@ -6,6 +6,7 @@ import { ConflictError, UnauthorizedError } from '../../../shared/errors/index.j
 import type { AuthRepository } from '../repositories/auth.repository.js';
 import type { AuthUserRecord } from '../types/auth.types.js';
 import { AccountSafetyService } from './account-safety.service.js';
+import { AuthAuditService } from './auth-audit.service.js';
 
 /**
  * AuthService boundary (#810).
@@ -22,7 +23,10 @@ export class AuthService {
   private readonly accountSafety = new AccountSafetyService();
   private readonly failedAttempts = new Map<string, number>();
 
-  constructor(private readonly authRepository: AuthRepository) {}
+  constructor(
+    private readonly authRepository: AuthRepository,
+    private readonly audit = new AuthAuditService(),
+  ) {}
 
   async register(input: RegisterInput): Promise<AuthResponse> {
     const existing = await this.authRepository.findByEmail(input.email);
@@ -32,7 +36,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(input.password, env.BCRYPT_SALT_ROUNDS);
     const user = await this.authRepository.create({ email: input.email, passwordHash });
-
+    this.audit.record({ type: 'AUTH_REGISTER', email: user.email, userId: user.id });
     return this.toAuthResponse(user);
   }
 
@@ -40,30 +44,58 @@ export class AuthService {
     // #804: reject logins once the account exceeds the failed-attempt threshold.
     const status = this.accountSafety.evaluateLockout(this.failedAttempts.get(input.email) ?? 0);
     if (status.isLocked) {
+      this.audit.record({ type: 'AUTH_LOGIN_FAILURE', email: input.email, metadata: { reason: 'locked' } });
       throw new UnauthorizedError(status.lockoutReason ?? 'Account is temporarily locked.');
     }
 
     const user = await this.authRepository.findByEmail(input.email);
     if (!user) {
+      this.audit.record({ type: 'AUTH_LOGIN_FAILURE', email: input.email, metadata: { reason: 'not_found' } });
       throw new UnauthorizedError('Invalid email or password.');
     }
 
     if (user.deactivatedAt) {
+      this.audit.record({ type: 'AUTH_LOGIN_FAILURE', email: input.email, userId: user.id, metadata: { reason: 'deactivated' } });
       throw new UnauthorizedError('This account has been deactivated.');
     }
 
     const isValidPassword = await bcrypt.compare(input.password, user.passwordHash);
     if (!isValidPassword) {
       this.failedAttempts.set(input.email, (this.failedAttempts.get(input.email) ?? 0) + 1);
+      this.audit.record({ type: 'AUTH_LOGIN_FAILURE', email: input.email, userId: user.id, metadata: { reason: 'invalid_password' } });
       throw new UnauthorizedError('Invalid email or password.');
     }
 
     this.failedAttempts.delete(input.email);
+    this.audit.record({ type: 'AUTH_LOGIN_SUCCESS', email: user.email, userId: user.id });
     return this.toAuthResponse(user);
   }
 
   async deactivateAccount(id: string): Promise<void> {
     await this.authRepository.deactivate(id);
+  }
+
+  async deleteAccount(input: LoginInput): Promise<void> {
+    const user = await this.authRepository.findByEmail(input.email);
+    if (!user) {
+      throw new UnauthorizedError('Invalid email or password.');
+    }
+
+    const isValidPassword = await bcrypt.compare(input.password, user.passwordHash);
+    if (!isValidPassword) {
+      throw new UnauthorizedError('Invalid email or password.');
+    }
+
+    await this.authRepository.deleteAccount(user.id);
+    this.audit.record({ type: 'AUTH_ACCOUNT_DELETION', email: user.email, userId: user.id });
+  }
+
+  recordSessionRevocation(email?: string, userId?: string): void {
+    this.audit.record({ type: 'AUTH_SESSION_REVOCATION', email, userId });
+  }
+
+  getAuditLog() {
+    return this.audit;
   }
 
   private toAuthResponse(user: AuthUserRecord): AuthResponse {

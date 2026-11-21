@@ -25,8 +25,10 @@ export class AuthController {
     }
   };
 
-  logout = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const email = typeof req.body?.email === 'string' ? req.body.email : undefined;
+      this.authService.recordSessionRevocation(email);
       res.status(200).json({ message: 'Logged out successfully' });
     } catch (error) {
       next(error);
