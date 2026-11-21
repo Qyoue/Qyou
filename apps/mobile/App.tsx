@@ -1,10 +1,14 @@
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { API_BASE_URL } from './src/config/env';
+import { LoginScreen } from './src/screens/LoginScreen';
 
 export default function App() {
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Qyou Mobile</Text>
-      <Text style={styles.subtitle}>Foundation ready</Text>
+      <LoginScreen onNavigateRegister={() => {}} />
     </View>
   );
 }
@@ -12,17 +16,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  subtitle: {
-    marginTop: 8,
-    fontSize: 16,
-    color: '#666666',
+    backgroundColor: '#ffffff',
   },
 });
