@@ -13,6 +13,12 @@ export const ErrorCode = {
   CONFLICT: 'CONFLICT',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  AUTH_INVALID_CREDENTIALS: 'AUTH_INVALID_CREDENTIALS',
+  AUTH_ACCOUNT_DEACTIVATED: 'AUTH_ACCOUNT_DEACTIVATED',
+  AUTH_SESSION_EXPIRED: 'AUTH_SESSION_EXPIRED',
+  AUTH_REAUTH_REQUIRED: 'AUTH_REAUTH_REQUIRED',
+  QUEUE_NOT_FOUND: 'QUEUE_NOT_FOUND',
+  QUEUE_ALREADY_JOINED: 'QUEUE_ALREADY_JOINED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
@@ -26,6 +32,12 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   CONFLICT: 409,
   RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
+  AUTH_INVALID_CREDENTIALS: 401,
+  AUTH_ACCOUNT_DEACTIVATED: 401,
+  AUTH_SESSION_EXPIRED: 401,
+  AUTH_REAUTH_REQUIRED: 401,
+  QUEUE_NOT_FOUND: 404,
+  QUEUE_ALREADY_JOINED: 409,
 };
 
 /** Default, user-safe message for each code. */
@@ -37,6 +49,12 @@ export const ERROR_MESSAGE: Record<ErrorCode, string> = {
   CONFLICT: 'The request conflicts with the current state.',
   RATE_LIMITED: 'Too many requests. Please try again later.',
   INTERNAL_ERROR: 'Internal server error.',
+  AUTH_INVALID_CREDENTIALS: 'Invalid email or password.',
+  AUTH_ACCOUNT_DEACTIVATED: 'This account has been deactivated.',
+  AUTH_SESSION_EXPIRED: 'Your session has expired. Please sign in again.',
+  AUTH_REAUTH_REQUIRED: 'Please re-authenticate to continue.',
+  QUEUE_NOT_FOUND: 'Queue not found.',
+  QUEUE_ALREADY_JOINED: 'You have already joined this queue.',
 };
 
 export interface ApiErrorBody {
