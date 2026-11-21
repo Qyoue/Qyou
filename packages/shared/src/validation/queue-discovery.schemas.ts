@@ -16,5 +16,10 @@ export const createQueueSchema = z.object({
   longitude: z.number().min(-180).max(180),
 });
 
+export const updateQueueSchema = createQueueSchema.partial().extend({
+  id: z.string().min(1, 'Queue id is required.'),
+});
+
 export type QueueFilterInput = z.infer<typeof queueFilterSchema>;
 export type CreateQueueInput = z.infer<typeof createQueueSchema>;
+export type UpdateQueueInput = z.infer<typeof updateQueueSchema>;
