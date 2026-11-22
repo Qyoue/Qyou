@@ -3,7 +3,16 @@ import { z } from 'zod';
 export const queueModerationSchema = z.object({
   queueId: z.string().min(1, 'Queue ID is required.'),
   operatorId: z.string().min(1, 'Operator ID is required.'),
-  action: z.enum(['pause', 'resume', 'flag', 'unflag', 'update_capacity']),
+  action: z.enum([
+    'pause',
+    'resume',
+    'flag',
+    'unflag',
+    'update_capacity',
+    'remove_member',
+    'close_queue',
+    'mute',
+  ]),
   reason: z.string().max(200).optional(),
 });
 

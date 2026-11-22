@@ -13,6 +13,7 @@ import { errorHandler } from './shared/middleware/error-handler.js';
 import { metricsMiddleware, renderMetrics } from './shared/middleware/metrics.js';
 import { requestIdMiddleware } from './shared/middleware/request-id.js';
 import { env } from './shared/config/env.js';
+import { createQueueRouter } from './modules/queue/routes/queue.routes.js';
 
 export interface AppDependencies {
   authRepository?: AuthRepository;
@@ -235,6 +236,8 @@ export function createApp(deps: AppDependencies = {}): Express {
     app.use('/api/v1/stellar', stellarRouter);
     app.use('/api/stellar', stellarRouter);
   }
+
+  app.use('/api/v1', createQueueRouter());
 
   // #815: health check for uptime monitors/load balancers — probes DB connectivity.
   app.get('/health', async (_req, res) => {
