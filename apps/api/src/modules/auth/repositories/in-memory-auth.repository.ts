@@ -36,4 +36,12 @@ export class InMemoryAuthRepository implements AuthRepository {
     record.deactivatedAt = new Date();
     return record;
   }
+
+  async deleteAccount(id: string): Promise<void> {
+    const record = [...this.usersByEmail.values()].find((u) => u.id === id);
+    if (!record) {
+      throw new Error('User not found.');
+    }
+    this.usersByEmail.delete(record.email);
+  }
 }

@@ -1,0 +1,26 @@
+name: Web E2E
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/web-e2e.yml"
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: pnpm/action-setup@v4
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: pnpm --filter @qyou/web exec playwright install --with-deps chromium
+      - name: Run Playwright tests
+        run: pnpm --filter @qyou/web test:e2e
+        env:
+          E2E_SEEDED_API: ${{ vars.E2E_SEEDED_API || '' }}

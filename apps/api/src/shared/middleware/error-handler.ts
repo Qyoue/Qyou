@@ -10,6 +10,14 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  const anyErr = err as { type?: string; status?: number; statusCode?: number };
+  if (anyErr?.type === 'entity.too.large' || anyErr?.status === 413 || anyErr?.statusCode === 413) {
+    res.status(413).json({
+      error: { code: ErrorCode.VALIDATION_ERROR, message: 'Request body too large.' },
+    });
+    return;
+  }
+
   if (err instanceof ZodError) {
     res.status(400).json({
       error: {

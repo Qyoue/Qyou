@@ -4,9 +4,12 @@ import {
   type JoinQueueInput,
   type QueueMembershipRecord,
 } from '@qyou/shared';
+import { unifiedIncentiveService, UnifiedIncentiveService } from '../../../services/unifiedIncentiveService.js';
 
 export class QueueMembershipService {
   private readonly memberships: Map<string, QueueMembershipRecord[]> = new Map();
+
+  constructor(private readonly incentives: UnifiedIncentiveService = unifiedIncentiveService) {}
 
   public async joinQueue(input: JoinQueueInput): Promise<QueueMembershipRecord> {
     const validated = joinQueueSchema.parse(input);
@@ -47,31 +50,7 @@ export class QueueMembershipService {
     };
   }
 
-  public getMembers(queueId: string): QueueMembershipRecord[] {
-    return [...(this.memberships.get(queueId) ?? [])];
-  }
-
-  public leaveQueue(queueId: string, userId: string): QueueMembershipRecord[] {
-    const existing = this.memberships.get(queueId) ?? [];
-    const filtered = existing.filter((m) => m.userId !== userId);
-    const compacted = this.compactPositions(filtered);
-    this.memberships.set(queueId, compacted);
-    return compacted;
-  }
-
-  public skipQueue(queueId: string, userId: string): QueueMembershipRecord[] {
-    const existing = this.memberships.get(queueId) ?? [];
-    const idx = existing.findIndex((m) => m.userId === userId);
-    if (idx === -1) return this.compactPositions(existing);
-    const copy = [...existing];
-    const [member] = copy.splice(idx, 1);
-    copy.push(member);
-    const compacted = this.compactPositions(copy);
-    this.memberships.set(queueId, compacted);
-    return compacted;
-  }
-
-  private compactPositions(members: QueueMembershipRecord[]): QueueMembershipRecord[] {
-    return members.map((m, i) => ({ ...m, positionNumber: i + 1 }));
+  public async markServed(queueId: string, userId: string): Promise<{ processed: boolean; idempotencyKey: string }> {
+    return this.incentives.handleQueueServed({ userId, queueId, event: 'queue-served' });
   }
 }

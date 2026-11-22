@@ -34,4 +34,17 @@ describe('QueueMembershipService', () => {
     assert.equal(overCapacity.isPermitted, false);
     assert.equal(overCapacity.capacityExceeded, true);
   });
+
+  it('200 parallel joins produce consistent positions with no duplicates (#1279)', async () => {
+    const svc = new QueueMembershipService();
+    const queueId = 'q-concurrent';
+    const joins = Array.from({ length: 200 }, (_, i) =>
+      svc.joinQueue({ queueId, userId: `u-${i + 1}`, role: 'member' }),
+    );
+    const records = await Promise.all(joins);
+    const positions = records.map((r) => r.positionNumber).sort((a, b) => a - b);
+    const expected = Array.from({ length: 200 }, (_, i) => i + 1);
+    assert.deepEqual(positions, expected);
+    assert.equal(new Set(records.map((r) => r.userId)).size, 200);
+  });
 });

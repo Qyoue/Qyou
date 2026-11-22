@@ -1,0 +1,22 @@
+.field { display: flex; flex-direction: column; gap: 0.25rem; }
+.label { font-size: 0.875rem; font-weight: 600; }
+.inputRow { display: flex; align-items: center; gap: 0.5rem; }
+.input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.inputInvalid { border-color: var(--color-danger-contrast); }
+.toggle {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+.error { color: var(--color-danger-contrast); font-size: 0.8125rem; margin: 0; }

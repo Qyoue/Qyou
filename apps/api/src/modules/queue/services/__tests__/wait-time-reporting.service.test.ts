@@ -32,4 +32,14 @@ describe('WaitTimeReportingService', () => {
     assert.equal(metrics.averageWaitMinutes, 20);
     assert.equal(metrics.confidenceScore, 40);
   });
+
+  it('rejects outliers in aggregate (#1277)', async () => {
+    const s = new WaitTimeReportingService();
+    for (const m of [10, 11, 12, 13, 12, 11, 120]) {
+      await s.submitReport('u', { queueId: 'q-outlier', reportedWaitMinutes: m });
+    }
+    const metrics = s.calculateMetrics('q-outlier');
+    assert.equal(metrics.reportsCount, 6);
+    assert.ok(metrics.averageWaitMinutes < 20);
+  });
 });

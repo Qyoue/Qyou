@@ -73,4 +73,26 @@ describe('AuthService', () => {
       );
     });
   });
+
+  describe('deleteAccount (#1296)', () => {
+    it('requires re-auth and deletes the account', async () => {
+      await authService.register({ email: 'delete@example.com', password: 'password123' });
+
+      await authService.deleteAccount({ email: 'delete@example.com', password: 'password123' });
+
+      await assert.rejects(
+        () => authService.login({ email: 'delete@example.com', password: 'password123' }),
+        /Invalid email or password/,
+      );
+    });
+
+    it('rejects deletion with wrong password', async () => {
+      await authService.register({ email: 'delete2@example.com', password: 'password123' });
+
+      await assert.rejects(
+        () => authService.deleteAccount({ email: 'delete2@example.com', password: 'wrong-pass' }),
+        /Invalid email or password/,
+      );
+    });
+  });
 });

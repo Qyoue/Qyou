@@ -1,4 +1,12 @@
-export type ModerationAction = 'pause' | 'resume' | 'flag' | 'unflag' | 'update_capacity';
+export type ModerationAction =
+  | 'pause'
+  | 'resume'
+  | 'flag'
+  | 'unflag'
+  | 'update_capacity'
+  | 'remove_member'
+  | 'close_queue'
+  | 'mute';
 
 export interface QueueModerationRecord {
   queueId: string;

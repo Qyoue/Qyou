@@ -28,22 +28,40 @@ export class WaitTimeReportingService {
     return report;
   }
 
+  public getReports(queueId: string): RealTimeWaitReport[] {
+    return [...(this.reports.get(queueId) ?? [])];
+  }
+
   public calculateMetrics(queueId: string): WaitTimeTrendMetrics {
     const list = this.reports.get(queueId) ?? [];
     if (list.length === 0) {
       return { queueId, averageWaitMinutes: 0, reportsCount: 0, trend: 'stable', confidenceScore: 0 };
     }
 
-    const total = list.reduce((acc, r) => acc + r.reportedWaitMinutes, 0);
-    const avg = Math.round(total / list.length);
-    const confidenceScore = Math.min(list.length * 20, 100);
+    const filtered = this.rejectOutliers(list.map((r) => r.reportedWaitMinutes));
+    const values = filtered.length > 0 ? filtered : list.map((r) => r.reportedWaitMinutes);
+    const total = values.reduce((acc, v) => acc + v, 0);
+    const avg = Math.round(total / values.length);
+    const confidenceScore = Math.min(values.length * 20, 100);
 
     return {
       queueId,
       averageWaitMinutes: avg,
-      reportsCount: list.length,
+      reportsCount: values.length,
       trend: 'stable',
       confidenceScore,
     };
+  }
+
+  private rejectOutliers(values: number[]): number[] {
+    if (values.length < 4) return values;
+    const sorted = [...values].sort((a, b) => a - b);
+    const q1 = sorted[Math.floor((sorted.length - 1) * 0.25)];
+    const q3 = sorted[Math.floor((sorted.length - 1) * 0.75)];
+    const iqr = q3 - q1;
+    if (iqr === 0) return values;
+    const lower = q1 - 1.5 * iqr;
+    const upper = q3 + 1.5 * iqr;
+    return values.filter((v) => v >= lower && v <= upper);
   }
 }
