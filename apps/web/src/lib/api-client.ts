@@ -159,5 +159,5 @@ export function refreshToken(input: TokenRefreshInput): Promise<TokenRefreshResp
 }
 
 export function validateSession(sessionId: string): Promise<SessionLifecyclePayload> {
-  return postJson<SessionLifecyclePayload>('/api/auth/session/validate', { sessionId });
+  return postJson<SessionLifecyclePayload>('/api/v1/auth/session/validate', { sessionId });
 }

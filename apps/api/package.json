@@ -10,8 +10,10 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "node --import tsx --test src/modules/auth/tests/*.test.ts",
-    "test:coverage": "c8 --reporter=text --reporter=lcov --branches=70 --lines=70 --functions=70 node --import tsx --test src/modules/auth/tests/*.test.ts"
+    "test": "node --import tsx --test src/modules/auth/tests/*.test.ts src/modules/queue/services/__tests__/*.test.ts",
+    "test:coverage": "c8 --reporter=text --reporter=lcov --branches=70 --lines=70 --functions=70 node --import tsx --test src/modules/auth/tests/*.test.ts src/modules/queue/services/__tests__/*.test.ts",
+    "openapi:generate": "node --import tsx scripts/generate-openapi.mjs",
+    "openapi:check": "node --import tsx scripts/generate-openapi.mjs && git diff --exit-code -- openapi.json"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",

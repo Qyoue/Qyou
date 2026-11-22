@@ -47,6 +47,9 @@ jobs:
       - name: Lint
         run: npm run lint -w @qyou/api
 
+      - name: OpenAPI spec check
+        run: npm run openapi:check -w @qyou/api
+
       - name: Test
         run: npm run test -w @qyou/api
 
