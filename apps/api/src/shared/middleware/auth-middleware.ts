@@ -6,6 +6,7 @@ import { UnauthorizedError } from '../errors/index.js';
 interface AccessTokenPayload {
   sub: string;
   email: string;
+  role?: 'USER' | 'OPERATOR' | 'ADMIN';
   iat?: number;
 }
 
@@ -23,6 +24,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
     req.user = {
       id: payload.sub,
       email: payload.email,
+      role: payload.role ?? 'USER',
       lastAuthAt: payload.iat ? payload.iat * 1000 : undefined,
     };
     next();
