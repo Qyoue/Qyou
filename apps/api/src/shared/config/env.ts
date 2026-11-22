@@ -19,6 +19,14 @@ const envSchema = z.object({
     .transform((val) => val.split(',').map((s) => s.trim())),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+  AUTH_LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  AUTH_REGISTER_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  AUTH_DEFAULT_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  BODY_LIMIT: z.string().default('100kb'),
 });
 
 const result = envSchema.safeParse(process.env);

@@ -4,9 +4,12 @@ import {
   type JoinQueueInput,
   type QueueMembershipRecord,
 } from '@qyou/shared';
+import { unifiedIncentiveService, UnifiedIncentiveService } from '../../../services/unifiedIncentiveService.js';
 
 export class QueueMembershipService {
   private readonly memberships: Map<string, QueueMembershipRecord[]> = new Map();
+
+  constructor(private readonly incentives: UnifiedIncentiveService = unifiedIncentiveService) {}
 
   public async joinQueue(input: JoinQueueInput): Promise<QueueMembershipRecord> {
     const validated = joinQueueSchema.parse(input);
@@ -45,5 +48,9 @@ export class QueueMembershipService {
         ? 'Queue at maximum capacity'
         : undefined,
     };
+  }
+
+  public async markServed(queueId: string, userId: string): Promise<{ processed: boolean; idempotencyKey: string }> {
+    return this.incentives.handleQueueServed({ userId, queueId, event: 'queue-served' });
   }
 }

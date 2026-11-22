@@ -1,4 +1,5 @@
 import { useState } from "react";
+import styles from "./TextField.module.css";
 
 interface TextFieldProps {
   label: string;
@@ -23,9 +24,9 @@ export function TextField({
   const inputType = type === "password" && showPassword ? "text" : type;
 
   return (
-    <div className="field">
-      <label htmlFor={name}>{label}</label>
-      <div style={{ display: "flex", alignItems: "center" }}>
+    <div className={`field ${styles.field}`}>
+      <label htmlFor={name} className={styles.label}>{label}</label>
+      <div className={styles.inputRow}>
         <input
           id={name}
           name={name}
@@ -34,20 +35,20 @@ export function TextField({
           autoComplete={autoComplete}
           aria-invalid={Boolean(error)}
           onChange={(event) => onChange(event.target.value)}
-          style={{ flex: 1 }}
+          className={[styles.input, error ? styles.inputInvalid : ""].filter(Boolean).join(" ")}
         />
         {type === "password" && (
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            style={{ marginLeft: 8 }}
+            className={styles.toggle}
             data-testid="password-toggle"
           >
             {showPassword ? "Hide" : "Show"}
           </button>
         )}
       </div>
-      {error ? <p className="field-error">{error}</p> : null}
+      {error ? <p className={`field-error ${styles.error}`}>{error}</p> : null}
     </div>
   );
 }
