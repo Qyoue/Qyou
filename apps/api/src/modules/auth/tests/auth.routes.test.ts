@@ -110,4 +110,35 @@ describe('Auth routes', () => {
       assert.ok(response.headers['access-control-allow-origin']);
     });
   });
+
+  describe('DELETE /api/auth/account (#1296)', () => {
+    it('deletes account when re-auth credentials are valid', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'delete-me@example.com', password: 'password123' });
+
+      const response = await request(app)
+        .delete('/api/auth/account')
+        .send({ email: 'delete-me@example.com', password: 'password123' });
+
+      assert.equal(response.status, 200);
+
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'delete-me@example.com', password: 'password123' });
+      assert.equal(login.status, 401);
+    });
+
+    it('rejects deletion with invalid password', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'delete-fail@example.com', password: 'password123' });
+
+      const response = await request(app)
+        .delete('/api/auth/account')
+        .send({ email: 'delete-fail@example.com', password: 'wrong-pass' });
+
+      assert.equal(response.status, 401);
+    });
+  });
 });

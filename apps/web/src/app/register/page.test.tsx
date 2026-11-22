@@ -1,4 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: jest.fn(), push: jest.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 import RegisterPage from './page';
 import { AuthProvider } from '../../lib/auth-context';
 

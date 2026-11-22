@@ -34,6 +34,21 @@
     "web": {
       "bundler": "metro"
     },
-    "scheme": "qyou"
+    "scheme": "qyou",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "qyou-mobile-project-id"
+      },
+      "typography": {
+        "supportsDynamicType": true,
+        "maxFontScaleMultiplier": 2
+      }
+    }
   }
 }

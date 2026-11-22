@@ -32,6 +32,8 @@ export function createApp(deps: AppDependencies = {}): Express {
 
   const app = express();
 
+  app.set('trust proxy', env.TRUST_PROXY);
+
   // #801: standard security headers (HSTS, X-Content-Type-Options, etc.)
   app.use(helmet());
 
@@ -51,31 +53,53 @@ export function createApp(deps: AppDependencies = {}): Express {
       },
     }),
   );
-  app.use(express.json());
+  app.use(express.json({ limit: env.BODY_LIMIT }));
   app.use(requestIdMiddleware);
   app.use(metricsMiddleware);
 
-  // #799: rate-limit auth routes to mitigate brute-force attempts.
-  const authRateLimiter = rateLimit({
+  const authKey = (req: express.Request): string => {
+    const ip = req.ip ?? 'unknown-ip';
+    const email = typeof req.body?.email === 'string' ? req.body.email.toLowerCase().trim() : '';
+    if (req.path.includes('/register')) return ip;
+    return email ? `${ip}:${email}` : ip;
+  };
+
+  const loginRateLimiter = rateLimit({
     windowMs: env.RATE_LIMIT_WINDOW_MS,
-    limit: env.RATE_LIMIT_MAX,
+    limit: env.AUTH_LOGIN_RATE_LIMIT_MAX,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
+    keyGenerator: authKey,
+  });
+
+  const registerRateLimiter = rateLimit({
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    limit: env.AUTH_REGISTER_RATE_LIMIT_MAX,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    keyGenerator: authKey,
+  });
+
+  const authDefaultRateLimiter = rateLimit({
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    limit: env.AUTH_DEFAULT_RATE_LIMIT_MAX,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    keyGenerator: authKey,
   });
 
   const authRepository = deps.authRepository ?? new PrismaAuthRepository(prisma);
+  const authRouter = createAuthRouter(authRepository);
 
   // All API routes versioned under /api/v1 (#821)
-  app.use('/api/v1/auth', authRateLimiter, createAuthRouter(authRepository));
+  app.use('/api/v1/auth/login', loginRateLimiter);
+  app.use('/api/v1/auth/register', registerRateLimiter);
+  app.use('/api/v1/auth', authDefaultRateLimiter, authRouter);
 
   // Keep /api/auth as a redirect alias for backwards compatibility during migration
-  app.use('/api/auth', (_req, res, next) => {
-    res.setHeader('Deprecation', 'true');
-    res.setHeader('Sunset', 'Wed, 01 Jul 2026 00:00:00 GMT');
-    res.setHeader('Link', '</api/v1/auth>; rel="successor-version"');
-    next();
-  });
-  app.use('/api/auth', authRateLimiter, createAuthRouter(authRepository));
+  app.use('/api/auth/login', loginRateLimiter);
+  app.use('/api/auth/register', registerRateLimiter);
+  app.use('/api/auth', authDefaultRateLimiter, authRouter);
 
   // Feature flag check (#959 / Track 1 #11): gate Stellar routes behind STELLAR_INCENTIVES_ENABLED (#1006)
   const stellarEnabled =
@@ -90,6 +114,19 @@ export function createApp(deps: AppDependencies = {}): Express {
     app.use('/api/v1/stellar', stellarRouter);
     app.use('/api/stellar', stellarRouter);
   }
+
+  app.get('/livez', (_req, res) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
+  app.get('/readyz', async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.status(200).json({ status: 'ok', db: 'up', migrations: 'ok' });
+    } catch {
+      res.status(503).json({ status: 'degraded', db: 'down' });
+    }
+  });
 
   // #815: health check for uptime monitors/load balancers — probes DB connectivity.
   app.get('/health', async (_req, res) => {
