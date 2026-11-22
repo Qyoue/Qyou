@@ -19,6 +19,7 @@ export class InMemoryAuthRepository implements AuthRepository {
       id: randomUUID(),
       email: data.email,
       passwordHash: data.passwordHash,
+      role: data.role ?? 'USER',
       createdAt: now,
       updatedAt: now,
     };

@@ -90,9 +90,13 @@ export class AuthService {
   }
 
   private toAuthResponse(user: AuthUserRecord): AuthResponse {
-    const accessToken = jwt.sign({ sub: user.id, email: user.email }, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
-    });
+    const accessToken = jwt.sign(
+      { sub: user.id, email: user.email, role: user.role },
+      env.JWT_SECRET,
+      {
+        expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
+      },
+    );
 
     return {
       user: {

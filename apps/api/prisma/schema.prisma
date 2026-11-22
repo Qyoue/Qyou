@@ -7,10 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  OPERATOR
+  ADMIN
+
+  @@map("user_role")
+}
+
 model User {
   id             String    @id @default(uuid())
   email          String    @unique
   passwordHash   String
+  role           UserRole  @default(USER)
   deactivatedAt  DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
