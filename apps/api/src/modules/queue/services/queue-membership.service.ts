@@ -46,4 +46,32 @@ export class QueueMembershipService {
         : undefined,
     };
   }
+
+  public getMembers(queueId: string): QueueMembershipRecord[] {
+    return [...(this.memberships.get(queueId) ?? [])];
+  }
+
+  public leaveQueue(queueId: string, userId: string): QueueMembershipRecord[] {
+    const existing = this.memberships.get(queueId) ?? [];
+    const filtered = existing.filter((m) => m.userId !== userId);
+    const compacted = this.compactPositions(filtered);
+    this.memberships.set(queueId, compacted);
+    return compacted;
+  }
+
+  public skipQueue(queueId: string, userId: string): QueueMembershipRecord[] {
+    const existing = this.memberships.get(queueId) ?? [];
+    const idx = existing.findIndex((m) => m.userId === userId);
+    if (idx === -1) return this.compactPositions(existing);
+    const copy = [...existing];
+    const [member] = copy.splice(idx, 1);
+    copy.push(member);
+    const compacted = this.compactPositions(copy);
+    this.memberships.set(queueId, compacted);
+    return compacted;
+  }
+
+  private compactPositions(members: QueueMembershipRecord[]): QueueMembershipRecord[] {
+    return members.map((m, i) => ({ ...m, positionNumber: i + 1 }));
+  }
 }

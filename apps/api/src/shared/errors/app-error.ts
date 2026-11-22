@@ -42,3 +42,9 @@ export class NotFoundError extends AppError {
     super(ERROR_STATUS[ErrorCode.NOT_FOUND], message, ErrorCode.NOT_FOUND);
   }
 }
+
+export class ForbiddenError extends AppError {
+  constructor(message = 'Forbidden') {
+    super(ERROR_STATUS[ErrorCode.FORBIDDEN], message, ErrorCode.FORBIDDEN);
+  }
+}
