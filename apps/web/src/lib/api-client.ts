@@ -30,24 +30,24 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 export function login(input: LoginInput): Promise<AuthResponse> {
-  return postJson<AuthResponse>('/api/auth/login', input);
+  return postJson<AuthResponse>('/api/v1/auth/login', input);
 }
 
 export function register(input: RegisterInput): Promise<AuthResponse> {
-  return postJson<AuthResponse>('/api/auth/register', input);
+  return postJson<AuthResponse>('/api/v1/auth/register', input);
 }
 
 // TODO(#831): refreshToken calls POST /api/auth/refresh which does not exist yet.
 // This function will throw a 404 at runtime until the backend route ships.
 // Track: https://github.com/Qyoue/Qyou/issues/831
 export function refreshToken(input: TokenRefreshInput): Promise<TokenRefreshResponse> {
-  return postJson<TokenRefreshResponse>('/api/auth/refresh', input);
+  return postJson<TokenRefreshResponse>('/api/v1/auth/refresh', input);
 }
 
 // TODO(#831): validateSession calls POST /api/auth/session/validate which does not exist yet.
 // This function will throw a 404 at runtime until the backend route ships.
 // Track: https://github.com/Qyoue/Qyou/issues/831
 export function validateSession(sessionId: string): Promise<SessionLifecyclePayload> {
-  return postJson<SessionLifecyclePayload>('/api/auth/session/validate', { sessionId });
+  return postJson<SessionLifecyclePayload>('/api/v1/auth/session/validate', { sessionId });
 }
 

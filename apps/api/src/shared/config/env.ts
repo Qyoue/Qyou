@@ -19,6 +19,13 @@ const envSchema = z.object({
     .transform((val) => val.split(',').map((s) => s.trim())),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+  METRICS_ENABLED: z.enum(['true', 'false']).optional(),
+  METRICS_BEARER_TOKEN: z.string().optional(),
+  METRICS_ALLOWLIST: z
+    .string()
+    .optional()
+    .default('')
+    .transform((v) => v.split(',').map((s) => s.trim()).filter(Boolean)),
 });
 
 const result = envSchema.safeParse(process.env);
