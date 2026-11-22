@@ -7,6 +7,7 @@ import { PrismaAuthRepository } from './modules/auth/repositories/auth.repositor
 import type { AuthRepository } from './modules/auth/repositories/auth.repository.js';
 import { InMemoryAuthRepository } from './modules/auth/repositories/in-memory-auth.repository.js';
 import { createStellarRouter } from './modules/stellar/routes/stellar.routes.js';
+import { createQueueRouter } from './modules/queue/routes/queue.routes.js';
 import { registerOperatorRoutes } from './routes/operatorRoutes.js';
 import { setupRewardSseStream } from './events/rewardStatusStream.js';
 import type { StellarRepository } from './modules/stellar/repositories/stellar.repository.js';
@@ -97,6 +98,7 @@ export function createApp(deps: AppDependencies = {}): Express {
   app.use('/api/v1/auth/login', loginRateLimiter);
   app.use('/api/v1/auth/register', registerRateLimiter);
   app.use('/api/v1/auth', authDefaultRateLimiter, authRouter);
+  app.use('/api/v1', createQueueRouter());
 
   // Keep /api/auth as a redirect alias for backwards compatibility during migration
   app.use('/api/auth/login', loginRateLimiter);
