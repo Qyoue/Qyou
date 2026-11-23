@@ -37,4 +37,26 @@ async function main() {
   console.log('Seeded queues:', queues.map((q) => q.queueId).join(', '));
 }
 
+async function revokeSessionByRefreshToken(
+  prisma: PrismaClient,
+  rawRefreshToken: string | undefined,
+  hashToken: (token: string) => string,
+): Promise<void> {
+  if (!rawRefreshToken) {
+    return;
+  }
+
+  const tokenHash = hashToken(rawRefreshToken);
+  const now = new Date();
+
+  await prisma.refreshToken.updateMany({
+    where: {
+      tokenHash,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: now,
+    },
+  });
+}
 main().finally(() => prisma.$disconnect());
