@@ -1,6 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import type { AuthRepository } from './auth.repository.js';
-import type { AuthUserRecord, CreateUserData } from '../types/auth.types.js';
+import type {
+  AuthActionTokenKind,
+  AuthSessionRecord,
+  AuthUserRecord,
+  CreateUserData,
+} from '../types/auth.types.js';
+
+interface InMemoryActionToken {
+  tokenHash: string;
+  userId: string;
+  kind: AuthActionTokenKind;
+  expiresAt: Date;
+  consumedAt: Date | null;
+  createdAt: Date;
+}
 
 /**
  * In-memory implementation of {@link AuthRepository}, used by tests so the
@@ -8,6 +22,9 @@ import type { AuthUserRecord, CreateUserData } from '../types/auth.types.js';
  */
 export class InMemoryAuthRepository implements AuthRepository {
   private readonly usersByEmail = new Map<string, AuthUserRecord>();
+  private readonly sessionsByHash = new Map<string, AuthSessionRecord>();
+  private readonly actionTokensByHash = new Map<string, InMemoryActionToken>();
+  private readonly actionRequestsAt = new Map<string, Date>();
 
   async findByEmail(email: string): Promise<AuthUserRecord | null> {
     return this.usersByEmail.get(email) ?? null;
@@ -20,6 +37,7 @@ export class InMemoryAuthRepository implements AuthRepository {
       email: data.email,
       passwordHash: data.passwordHash,
       role: data.role ?? 'USER',
+      emailVerifiedAt: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -43,5 +61,83 @@ export class InMemoryAuthRepository implements AuthRepository {
       throw new Error('User not found.');
     }
     this.usersByEmail.delete(record.email);
+    for (const [hash, session] of this.sessionsByHash) {
+      if (session.userId === id) this.sessionsByHash.delete(hash);
+    }
+    for (const [hash, token] of this.actionTokensByHash) {
+      if (token.userId === id) this.actionTokensByHash.delete(hash);
+    }
+  }
+
+  async createSession(data: Omit<AuthSessionRecord, 'id' | 'createdAt'>): Promise<void> {
+    this.sessionsByHash.set(data.tokenHash, {
+      ...data,
+      id: randomUUID(),
+      createdAt: new Date(),
+    });
+  }
+
+  async listActiveSessions(userId: string, now: Date): Promise<AuthSessionRecord[]> {
+    return [...this.sessionsByHash.values()]
+      .filter(
+        (session) => session.userId === userId && !session.revokedAt && session.expiresAt > now,
+      )
+      .sort((left, right) => right.lastUsedAt.getTime() - left.lastUsedAt.getTime());
+  }
+
+  async touchSession(tokenHash: string, now: Date): Promise<void> {
+    const session = this.sessionsByHash.get(tokenHash);
+    if (session && !session.revokedAt && session.expiresAt > now) session.lastUsedAt = now;
+  }
+
+  async revokeSession(tokenHash: string, now: Date): Promise<void> {
+    const session = this.sessionsByHash.get(tokenHash);
+    if (session && !session.revokedAt) session.revokedAt = now;
+  }
+
+  async createActionToken(input: {
+    tokenHash: string;
+    userId: string;
+    kind: AuthActionTokenKind;
+    expiresAt: Date;
+    createdAt: Date;
+    cooldownAfter: Date;
+  }): Promise<boolean> {
+    const cooldownKey = `${input.userId}:${input.kind}`;
+    const lastRequestAt = this.actionRequestsAt.get(cooldownKey);
+    if (lastRequestAt && lastRequestAt > input.cooldownAfter) return false;
+
+    for (const token of this.actionTokensByHash.values()) {
+      if (token.userId === input.userId && token.kind === input.kind && !token.consumedAt) {
+        token.consumedAt = input.createdAt;
+      }
+    }
+    this.actionTokensByHash.set(input.tokenHash, {
+      ...input,
+      consumedAt: null,
+    });
+    this.actionRequestsAt.set(cooldownKey, input.createdAt);
+    return true;
+  }
+
+  async consumeActionToken(
+    tokenHash: string,
+    kind: AuthActionTokenKind,
+    now: Date,
+    newPasswordHash?: string,
+  ): Promise<boolean> {
+    const token = this.actionTokensByHash.get(tokenHash);
+    if (!token || token.kind !== kind || token.consumedAt || token.expiresAt <= now) return false;
+    const user = [...this.usersByEmail.values()].find((candidate) => candidate.id === token.userId);
+    if (!user) return false;
+    if (kind === 'PASSWORD_RESET') {
+      if (!newPasswordHash) throw new Error('A new password hash is required for password reset.');
+      user.passwordHash = newPasswordHash;
+    } else {
+      user.emailVerifiedAt = now;
+    }
+    user.updatedAt = now;
+    token.consumedAt = now;
+    return true;
   }
 }

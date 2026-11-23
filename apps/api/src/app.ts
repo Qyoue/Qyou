@@ -16,11 +16,13 @@ import { metricsMiddleware, renderMetrics } from './shared/middleware/metrics.js
 import { requestIdMiddleware } from './shared/middleware/request-id.js';
 import { env } from './shared/config/env.js';
 import { openApiSpec } from './openapi-spec.js';
+import { createMailer, type Mailer } from './modules/auth/services/mailer.js';
 
 export interface AppDependencies {
   authRepository?: AuthRepository;
   stellarRepository?: StellarRepository;
   stellarEnabled?: boolean;
+  mailer?: Mailer;
 }
 
 export function createApp(deps: AppDependencies = {}): Express {
@@ -91,14 +93,29 @@ export function createApp(deps: AppDependencies = {}): Express {
   });
 
   const authRepository = deps.authRepository ?? new PrismaAuthRepository(prisma);
-  const authRouter = createAuthRouter(authRepository);
+  const authRouter = createAuthRouter(authRepository, deps.mailer ?? createMailer());
+  const emailActionRateLimiter = rateLimit({
+    windowMs: env.EMAIL_ACTION_RATE_LIMIT_WINDOW_MS,
+    limit: env.EMAIL_ACTION_RATE_LIMIT_MAX,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    keyGenerator: authKey,
+  });
 
   // All API routes versioned under /api/v1 (#821)
+  app.use('/api/v1/auth/email-verification/request', emailActionRateLimiter);
+  app.use('/api/v1/auth/password-reset/request', emailActionRateLimiter);
+  app.use('/api/v1/auth/email-verification/confirm', emailActionRateLimiter);
+  app.use('/api/v1/auth/password-reset/confirm', emailActionRateLimiter);
   app.use('/api/v1/auth/login', loginRateLimiter);
   app.use('/api/v1/auth/register', registerRateLimiter);
   app.use('/api/v1/auth', authDefaultRateLimiter, authRouter);
 
   // Keep /api/auth as a redirect alias for backwards compatibility during migration
+  app.use('/api/auth/email-verification/request', emailActionRateLimiter);
+  app.use('/api/auth/password-reset/request', emailActionRateLimiter);
+  app.use('/api/auth/email-verification/confirm', emailActionRateLimiter);
+  app.use('/api/auth/password-reset/confirm', emailActionRateLimiter);
   app.use('/api/auth/login', loginRateLimiter);
   app.use('/api/auth/register', registerRateLimiter);
   app.use('/api/auth', authDefaultRateLimiter, authRouter);
@@ -142,7 +159,9 @@ export function createApp(deps: AppDependencies = {}): Express {
 
   // #817: Prometheus-format metrics for scapers/observability backends.
   app.get('/metrics', (req, res) => {
-    const enabled = env.METRICS_ENABLED === 'true' || (env.NODE_ENV !== 'production' && env.METRICS_ENABLED !== 'false');
+    const enabled =
+      env.METRICS_ENABLED === 'true' ||
+      (env.NODE_ENV !== 'production' && env.METRICS_ENABLED !== 'false');
     if (!enabled) {
       res.status(404).json({ error: { message: 'Not found' } });
       return;
@@ -153,7 +172,8 @@ export function createApp(deps: AppDependencies = {}): Express {
       ? authHeader === `Bearer ${env.METRICS_BEARER_TOKEN}`
       : false;
     const ip = req.ip ?? '';
-    const allowlisted = env.METRICS_ALLOWLIST.length > 0 ? env.METRICS_ALLOWLIST.includes(ip) : false;
+    const allowlisted =
+      env.METRICS_ALLOWLIST.length > 0 ? env.METRICS_ALLOWLIST.includes(ip) : false;
 
     if (env.METRICS_BEARER_TOKEN || env.METRICS_ALLOWLIST.length > 0) {
       if (!tokenOk && !allowlisted) {

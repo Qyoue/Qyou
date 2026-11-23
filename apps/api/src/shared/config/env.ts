@@ -7,10 +7,9 @@ const envSchema = z.object({
   JWT_SECRET: z
     .string()
     .min(1, 'JWT_SECRET is required')
-    .refine(
-      (val) => process.env.NODE_ENV !== 'production' || val.length >= 32,
-      { message: 'JWT_SECRET must be at least 32 characters in production' },
-    ),
+    .refine((val) => process.env.NODE_ENV !== 'production' || val.length >= 32, {
+      message: 'JWT_SECRET must be at least 32 characters in production',
+    }),
   JWT_EXPIRES_IN: z.string().default('1h'),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(12).default(12),
   CORS_ORIGINS: z
@@ -22,6 +21,19 @@ const envSchema = z.object({
   AUTH_LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   AUTH_REGISTER_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
   AUTH_DEFAULT_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  EMAIL_ACTION_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(3),
+  EMAIL_ACTION_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
+  WEB_BASE_URL: z.string().url().default('http://localhost:3000'),
+  MAILER_MODE: z.enum(['auto', 'console', 'smtp']).default('auto'),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().trim().min(1).optional(),
   TRUST_PROXY: z
     .enum(['true', 'false'])
     .default('false')
