@@ -59,4 +59,20 @@ async function revokeSessionByRefreshToken(
     },
   });
 }
+async function revokeAllUserSessions(
+  prisma: PrismaClient,
+  userId: string,
+): Promise<number> {
+  const result = await prisma.refreshToken.updateMany({
+    where: {
+      userId,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+
+  return result.count;
+}
 main().finally(() => prisma.$disconnect());
