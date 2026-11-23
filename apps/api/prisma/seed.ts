@@ -75,4 +75,44 @@ async function revokeAllUserSessions(
 
   return result.count;
 }
+async function buildSessionLifecyclePayload(
+  prisma: PrismaClient,
+  rawToken: string | undefined,
+  hashToken: (token: string) => string,
+): Promise<SessionLifecyclePayload> {
+  if (!rawToken) {
+    return {
+      valid: false,
+      expired: false,
+      revoked: false,
+      expiresAt: null,
+    };
+  }
+
+  const tokenHash = hashToken(rawToken);
+  const record = await prisma.refreshToken.findUnique({
+    where: { tokenHash },
+  });
+
+  if (!record) {
+    return {
+      valid: false,
+      expired: false,
+      revoked: false,
+      expiresAt: null,
+    };
+  }
+
+  const now = new Date();
+  const expired = record.expiresAt <= now;
+  const revoked = record.revokedAt !== null;
+  const valid = !expired && !revoked;
+
+  return {
+    valid,
+    expired,
+    revoked,
+    expiresAt: record.expiresAt.toISOString(),
+  };
+}
 main().finally(() => prisma.$disconnect());
