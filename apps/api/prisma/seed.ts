@@ -37,4 +37,82 @@ async function main() {
   console.log('Seeded queues:', queues.map((q) => q.queueId).join(', '));
 }
 
+async function revokeSessionByRefreshToken(
+  prisma: PrismaClient,
+  rawRefreshToken: string | undefined,
+  hashToken: (token: string) => string,
+): Promise<void> {
+  if (!rawRefreshToken) {
+    return;
+  }
+
+  const tokenHash = hashToken(rawRefreshToken);
+  const now = new Date();
+
+  await prisma.refreshToken.updateMany({
+    where: {
+      tokenHash,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: now,
+    },
+  });
+}
+async function revokeAllUserSessions(
+  prisma: PrismaClient,
+  userId: string,
+): Promise<number> {
+  const result = await prisma.refreshToken.updateMany({
+    where: {
+      userId,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+
+  return result.count;
+}
+async function buildSessionLifecyclePayload(
+  prisma: PrismaClient,
+  rawToken: string | undefined,
+  hashToken: (token: string) => string,
+): Promise<SessionLifecyclePayload> {
+  if (!rawToken) {
+    return {
+      valid: false,
+      expired: false,
+      revoked: false,
+      expiresAt: null,
+    };
+  }
+
+  const tokenHash = hashToken(rawToken);
+  const record = await prisma.refreshToken.findUnique({
+    where: { tokenHash },
+  });
+
+  if (!record) {
+    return {
+      valid: false,
+      expired: false,
+      revoked: false,
+      expiresAt: null,
+    };
+  }
+
+  const now = new Date();
+  const expired = record.expiresAt <= now;
+  const revoked = record.revokedAt !== null;
+  const valid = !expired && !revoked;
+
+  return {
+    valid,
+    expired,
+    revoked,
+    expiresAt: record.expiresAt.toISOString(),
+  };
+}
 main().finally(() => prisma.$disconnect());
