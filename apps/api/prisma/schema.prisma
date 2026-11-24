@@ -16,28 +16,35 @@ enum UserRole {
 }
 
 model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
-  passwordHash   String
-  role           UserRole  @default(USER)
-  deactivatedAt  DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                           String    @id @default(uuid())
+  email                        String    @unique
+  passwordHash                 String
+  role                         UserRole  @default(USER)
+  emailVerifiedAt              DateTime?
+  emailVerificationRequestedAt DateTime?
+  passwordResetRequestedAt     DateTime?
+  deactivatedAt                DateTime?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
 
-  walletLinks WalletLink[]
+  walletLinks   WalletLink[]
+  refreshTokens RefreshToken[]
+  sessions      AuthSession[]
+  actionTokens  AuthActionToken[]
 
   @@map("users")
 }
 
 model WalletLink {
-  id                String    @id @default(uuid())
-  sessionId         String    @unique
-  userId            String
-  publicKey         String    @unique
-  network           String    @default("TESTNET")
-  encryptedSecretKey String?   // custodial-only; remains null for non-custodial wallets
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                 String   @id @default(uuid())
+  sessionId          String   @unique
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicKey          String   @unique
+  network            String   @default("TESTNET")
+  encryptedSecretKey String? // custodial-only; remains null for non-custodial wallets
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([userId])
   @@map("wallet_links")
@@ -63,19 +70,14 @@ model Reward {
 }
 
 model QueueIncentiveConfig {
-  queueId          String   @id
-  enabled          Boolean  @default(true)
-  rewardAmount     String
-  asset            String
+  queueId           String   @id
+  enabled           Boolean  @default(true)
+  rewardAmount      String
+  asset             String
   maxRewardsPerUser Int?
-  updatedAt        DateTime @updatedAt
+  updatedAt         DateTime @updatedAt
 
   @@map("queue_incentive_configs")
-}
-
-model User {
-  // ...existing fields and walletLinks
-  refreshTokens RefreshToken[]
 }
 
 model RefreshToken {
@@ -92,4 +94,35 @@ model RefreshToken {
 
   @@index([userId])
   @@index([tokenHash])
+}
+
+model AuthSession {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  userAgent  String?
+  ip         String?
+  lastUsedAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+  @@map("auth_sessions")
+}
+
+model AuthActionToken {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  kind       String
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, kind, createdAt])
+  @@index([expiresAt])
+  @@map("auth_action_tokens")
 }

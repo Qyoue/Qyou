@@ -1,0 +1,4 @@
+Confirm your email address by opening this link:
+{{url}}
+
+If you did not create this account, you can ignore this message.
