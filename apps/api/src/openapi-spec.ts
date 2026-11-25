@@ -58,6 +58,32 @@ export const openApiSpec = {
         },
       },
     },
+    '/auth/refresh': {
+      post: {
+        summary: 'Rotate a refresh token for a new access token pair',
+        description:
+          'Consumes the presented refresh token and issues new tokens. Reusing the old token returns 401 (#1263).',
+        tags: ['Auth'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/TokenRefreshInput' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'New token pair',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/TokenRefreshResponse' } },
+            },
+          },
+          400: { description: 'Invalid request body' },
+          401: { description: 'Invalid, expired, or already used refresh token' },
+        },
+      },
+    },
     '/auth/logout': {
       post: {
         summary: 'Log out (invalidate session)',
@@ -267,18 +293,41 @@ export const openApiSpec = {
           password: { type: 'string' },
         },
       },
+      AuthTokens: {
+        type: 'object',
+        required: ['accessToken'],
+        properties: {
+          accessToken: { type: 'string' },
+          refreshToken: { type: 'string' },
+          expiresIn: { type: 'integer' },
+        },
+      },
       AuthResponse: {
         type: 'object',
+        required: ['user', 'tokens'],
         properties: {
-          token: { type: 'string' },
           user: {
             type: 'object',
+            required: ['id', 'email', 'createdAt', 'updatedAt'],
             properties: {
               id: { type: 'string' },
-              email: { type: 'string' },
+              email: { type: 'string', format: 'email' },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
             },
           },
+          tokens: { $ref: '#/components/schemas/AuthTokens' },
         },
+      },
+      TokenRefreshInput: {
+        type: 'object',
+        required: ['refreshToken'],
+        properties: { refreshToken: { type: 'string', minLength: 1 } },
+      },
+      TokenRefreshResponse: {
+        type: 'object',
+        required: ['tokens'],
+        properties: { tokens: { $ref: '#/components/schemas/AuthTokens' } },
       },
     },
   },

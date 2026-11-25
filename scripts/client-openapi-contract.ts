@@ -15,7 +15,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const KNOWN_DRIFT: Record<string, string> = {
   '/api/auth/login': 'auth endpoints are not in openapi.json yet',
   '/api/auth/register': 'auth endpoints are not in openapi.json yet',
-  '/api/auth/refresh': 'TODO(#831): endpoint does not exist on the API yet',
+  '/api/auth/refresh': 'legacy /api alias of the documented /auth/refresh route (#1263)',
   '/api/auth/session/validate': 'TODO(#831): endpoint does not exist on the API yet',
 };
 

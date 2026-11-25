@@ -15,7 +15,9 @@
     "/auth/register": {
       "post": {
         "summary": "Register a new account",
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -46,7 +48,9 @@
     "/auth/login": {
       "post": {
         "summary": "Log in with email and password",
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -74,10 +78,49 @@
         }
       }
     },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Rotate a refresh token for a new access token pair",
+        "description": "Consumes the presented refresh token and issues new tokens. Reusing the old token returns 401 (#1263).",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRefreshInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New token pair",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenRefreshResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "401": {
+            "description": "Invalid, expired, or already used refresh token"
+          }
+        }
+      }
+    },
     "/auth/logout": {
       "post": {
         "summary": "Log out (invalidate session)",
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "responses": {
           "200": {
             "description": "Logged out"
@@ -88,7 +131,9 @@
     "/auth/sessions": {
       "get": {
         "summary": "List active authentication sessions",
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "security": [
           {
             "BearerAuth": []
@@ -101,13 +146,20 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["sessions"],
+                  "required": [
+                    "sessions"
+                  ],
                   "properties": {
                     "sessions": {
                       "type": "array",
                       "items": {
                         "type": "object",
-                        "required": ["id", "device", "lastUsedAt", "current"],
+                        "required": [
+                          "id",
+                          "device",
+                          "lastUsedAt",
+                          "current"
+                        ],
                         "properties": {
                           "id": {
                             "type": "string"
@@ -139,14 +191,18 @@
     "/auth/email-verification/request": {
       "post": {
         "summary": "Request an email verification message",
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email"],
+                "required": [
+                  "email"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -170,14 +226,18 @@
     "/auth/email-verification/confirm": {
       "post": {
         "summary": "Confirm an email verification token",
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["token"],
+                "required": [
+                  "token"
+                ],
                 "properties": {
                   "token": {
                     "type": "string"
@@ -200,14 +260,18 @@
     "/auth/password-reset/request": {
       "post": {
         "summary": "Request a password reset email",
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email"],
+                "required": [
+                  "email"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -231,14 +295,19 @@
     "/auth/password-reset/confirm": {
       "post": {
         "summary": "Set a new password with a reset token",
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["token", "password"],
+                "required": [
+                  "token",
+                  "password"
+                ],
                 "properties": {
                   "token": {
                     "type": "string"
@@ -264,7 +333,9 @@
     "/stellar/wallet": {
       "post": {
         "summary": "Link a Stellar public key to user account",
-        "tags": ["Stellar"],
+        "tags": [
+          "Stellar"
+        ],
         "security": [
           {
             "BearerAuth": []
@@ -276,7 +347,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["publicKey"],
+                "required": [
+                  "publicKey"
+                ],
                 "properties": {
                   "publicKey": {
                     "type": "string",
@@ -301,7 +374,9 @@
       },
       "get": {
         "summary": "Get linked Stellar wallet and cached balances",
-        "tags": ["Stellar"],
+        "tags": [
+          "Stellar"
+        ],
         "security": [
           {
             "BearerAuth": []
@@ -318,7 +393,9 @@
       },
       "delete": {
         "summary": "Unlink a linked Stellar wallet with re-authentication",
-        "tags": ["Stellar"],
+        "tags": [
+          "Stellar"
+        ],
         "security": [
           {
             "BearerAuth": []
@@ -360,7 +437,10 @@
     "schemas": {
       "RegisterInput": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -374,7 +454,10 @@
       },
       "LoginInput": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -385,22 +468,81 @@
           }
         }
       },
-      "AuthResponse": {
+      "AuthTokens": {
         "type": "object",
+        "required": [
+          "accessToken"
+        ],
         "properties": {
-          "token": {
+          "accessToken": {
             "type": "string"
           },
+          "refreshToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "required": [
+          "user",
+          "tokens"
+        ],
+        "properties": {
           "user": {
             "type": "object",
+            "required": [
+              "id",
+              "email",
+              "createdAt",
+              "updatedAt"
+            ],
             "properties": {
               "id": {
                 "type": "string"
               },
               "email": {
-                "type": "string"
+                "type": "string",
+                "format": "email"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
               }
             }
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/AuthTokens"
+          }
+        }
+      },
+      "TokenRefreshInput": {
+        "type": "object",
+        "required": [
+          "refreshToken"
+        ],
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "TokenRefreshResponse": {
+        "type": "object",
+        "required": [
+          "tokens"
+        ],
+        "properties": {
+          "tokens": {
+            "$ref": "#/components/schemas/AuthTokens"
           }
         }
       }

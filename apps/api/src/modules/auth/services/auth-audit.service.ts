@@ -3,6 +3,8 @@ import { logger } from '../../../shared/logger/index.js';
 export type AuthAuditEventType =
   | 'AUTH_LOGIN_SUCCESS'
   | 'AUTH_LOGIN_FAILURE'
+  | 'AUTH_REFRESH_SUCCESS'
+  | 'AUTH_REFRESH_FAILURE'
   | 'AUTH_REGISTER'
   | 'AUTH_LOGOUT'
   | 'AUTH_PASSWORD_RESET_REQUEST'

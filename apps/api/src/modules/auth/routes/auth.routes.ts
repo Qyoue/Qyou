@@ -12,6 +12,7 @@ export function createAuthRouter(authRepository: AuthRepository, mailer?: Mailer
   const router = Router();
   router.post('/register', controller.register);
   router.post('/login', controller.login);
+  router.post('/refresh', controller.refresh);
   router.post('/logout', controller.logout);
   router.delete('/account', controller.deleteAccount);
   router.get('/sessions', requireAuth, controller.listSessions);
