@@ -29,4 +29,15 @@ export interface AuthSessionRecord {
   createdAt: Date;
 }
 
+export interface RefreshTokenRecord {
+  id: string;
+  tokenHash: string;
+  userId: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  userAgent: string | null;
+  ip: string | null;
+  createdAt: Date;
+}
+
 export type AuthActionTokenKind = 'EMAIL_VERIFICATION' | 'PASSWORD_RESET';

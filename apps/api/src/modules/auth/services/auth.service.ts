@@ -1,7 +1,13 @@
 import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import jwt, { type SignOptions } from 'jsonwebtoken';
-import type { AuthResponse, LoginInput, RegisterInput } from '@qyou/shared';
+import type {
+  AuthResponse,
+  LoginInput,
+  RegisterInput,
+  TokenRefreshInput,
+  TokenRefreshResponse,
+} from '@qyou/shared';
 import { env } from '../../../shared/config/env.js';
 import { ConflictError, UnauthorizedError, ValidationError } from '../../../shared/errors/index.js';
 import type { AuthRepository } from '../repositories/auth.repository.js';
@@ -14,6 +20,7 @@ import { logger } from '../../../shared/logger/index.js';
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 const EMAIL_ACTION_COOLDOWN_MS = 60 * 1000;
+const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export interface AuthRequestContext {
   userAgent?: string | null;
@@ -25,6 +32,14 @@ export interface PublicAuthSession {
   device: string;
   lastUsedAt: string;
   current: boolean;
+}
+
+interface RefreshTokenPayload {
+  sub: string;
+  jti: string;
+  type: 'refresh';
+  iat?: number;
+  exp?: number;
 }
 
 /**
@@ -107,6 +122,67 @@ export class AuthService {
     this.failedAttempts.delete(input.email);
     this.audit.record({ type: 'AUTH_LOGIN_SUCCESS', email: user.email, userId: user.id });
     return this.toAuthResponse(user, context);
+  }
+
+  /**
+   * #1263: exchange a refresh token for a new token pair. The presented token is
+   * consumed (revoked) before new tokens are issued, so replaying it fails.
+   */
+  async refresh(
+    input: TokenRefreshInput,
+    context: AuthRequestContext = {},
+  ): Promise<TokenRefreshResponse> {
+    let payload: RefreshTokenPayload;
+    try {
+      payload = jwt.verify(input.refreshToken, env.JWT_SECRET) as RefreshTokenPayload;
+    } catch (error) {
+      this.audit.record({
+        type: 'AUTH_REFRESH_FAILURE',
+        metadata: { reason: error instanceof jwt.TokenExpiredError ? 'expired' : 'invalid' },
+      });
+      throw new UnauthorizedError(
+        error instanceof jwt.TokenExpiredError
+          ? 'The refresh token has expired.'
+          : 'The refresh token is invalid.',
+      );
+    }
+
+    if (
+      payload.type !== 'refresh' ||
+      typeof payload.sub !== 'string' ||
+      typeof payload.jti !== 'string' ||
+      typeof payload.exp !== 'number'
+    ) {
+      this.audit.record({ type: 'AUTH_REFRESH_FAILURE', metadata: { reason: 'invalid' } });
+      throw new UnauthorizedError('The refresh token is invalid.');
+    }
+
+    const consumed = await this.authRepository.consumeRefreshToken(
+      this.hashToken(input.refreshToken),
+      new Date(),
+    );
+    if (!consumed || consumed.userId !== payload.sub) {
+      this.audit.record({
+        type: 'AUTH_REFRESH_FAILURE',
+        userId: payload.sub,
+        metadata: { reason: consumed ? 'mismatched_user' : 'reused_or_revoked' },
+      });
+      throw new UnauthorizedError('The refresh token is invalid or has already been used.');
+    }
+
+    const user = await this.authRepository.findById(consumed.userId);
+    if (!user || user.deactivatedAt) {
+      this.audit.record({
+        type: 'AUTH_REFRESH_FAILURE',
+        userId: consumed.userId,
+        metadata: { reason: user ? 'deactivated' : 'not_found' },
+      });
+      throw new UnauthorizedError('The account is no longer active.');
+    }
+
+    const result = await this.toAuthResponse(user, context);
+    this.audit.record({ type: 'AUTH_REFRESH_SUCCESS', email: user.email, userId: user.id });
+    return { tokens: result.tokens };
   }
 
   async requestEmailVerification(email: string): Promise<void> {
@@ -193,6 +269,24 @@ export class AuthService {
       throw new Error('The issued access token has no expiration.');
     }
 
+    const refreshToken = jwt.sign(
+      {
+        sub: user.id,
+        jti: randomBytes(16).toString('hex'),
+        type: 'refresh',
+      },
+      env.JWT_SECRET,
+      { expiresIn: REFRESH_TOKEN_TTL_SECONDS },
+    );
+    const refreshPayload = jwt.decode(refreshToken);
+    if (
+      !refreshPayload ||
+      typeof refreshPayload === 'string' ||
+      typeof refreshPayload.exp !== 'number'
+    ) {
+      throw new Error('The issued refresh token has no expiration.');
+    }
+
     const now = new Date();
     await this.authRepository.createSession({
       userId: user.id,
@@ -203,6 +297,13 @@ export class AuthService {
       ip: context.ip?.slice(0, 64) ?? null,
       lastUsedAt: now,
     });
+    await this.authRepository.createRefreshToken({
+      tokenHash: this.hashToken(refreshToken),
+      userId: user.id,
+      expiresAt: new Date(refreshPayload.exp * 1000),
+      userAgent: context.userAgent?.slice(0, 512) ?? null,
+      ip: context.ip?.slice(0, 64) ?? null,
+    });
 
     return {
       user: {
@@ -211,7 +312,11 @@ export class AuthService {
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
       },
-      tokens: { accessToken },
+      tokens: {
+        accessToken,
+        refreshToken,
+        expiresIn: payload.exp - Math.floor(now.getTime() / 1000),
+      },
     };
   }
 

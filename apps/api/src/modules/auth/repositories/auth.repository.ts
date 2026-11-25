@@ -1,9 +1,10 @@
-import type { PrismaClient, User } from '@prisma/client';
+import type { PrismaClient, RefreshToken, User } from '@prisma/client';
 import type {
   AuthActionTokenKind,
   AuthSessionRecord,
   AuthUserRecord,
   CreateUserData,
+  RefreshTokenRecord,
 } from '../types/auth.types.js';
 
 function toAuthUserRecord(user: User): AuthUserRecord {
@@ -19,8 +20,22 @@ function toAuthUserRecord(user: User): AuthUserRecord {
   };
 }
 
+function toRefreshTokenRecord(token: RefreshToken): RefreshTokenRecord {
+  return {
+    id: token.id,
+    tokenHash: token.tokenHash,
+    userId: token.userId,
+    expiresAt: token.expiresAt,
+    revokedAt: token.revokedAt ?? null,
+    userAgent: token.userAgent ?? null,
+    ip: token.ip ?? null,
+    createdAt: token.createdAt,
+  };
+}
+
 export interface AuthRepository {
   findByEmail(email: string): Promise<AuthUserRecord | null>;
+  findById(id: string): Promise<AuthUserRecord | null>;
   create(data: CreateUserData): Promise<AuthUserRecord>;
   deactivate(id: string): Promise<AuthUserRecord>;
   deleteAccount(id: string): Promise<void>;
@@ -28,6 +43,10 @@ export interface AuthRepository {
   listActiveSessions(userId: string, now: Date): Promise<AuthSessionRecord[]>;
   touchSession(tokenHash: string, now: Date): Promise<void>;
   revokeSession(tokenHash: string, now: Date): Promise<void>;
+  createRefreshToken(
+    data: Omit<RefreshTokenRecord, 'id' | 'revokedAt' | 'createdAt'>,
+  ): Promise<void>;
+  consumeRefreshToken(tokenHash: string, now: Date): Promise<RefreshTokenRecord | null>;
   createActionToken(input: {
     tokenHash: string;
     userId: string;
@@ -49,6 +68,11 @@ export class PrismaAuthRepository implements AuthRepository {
 
   async findByEmail(email: string): Promise<AuthUserRecord | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
+    return user ? toAuthUserRecord(user) : null;
+  }
+
+  async findById(id: string): Promise<AuthUserRecord | null> {
+    const user = await this.prisma.user.findUnique({ where: { id } });
     return user ? toAuthUserRecord(user) : null;
   }
 
@@ -105,6 +129,29 @@ export class PrismaAuthRepository implements AuthRepository {
     await this.prisma.authSession.updateMany({
       where: { tokenHash, revokedAt: null },
       data: { revokedAt: now },
+    });
+  }
+
+  async createRefreshToken(
+    data: Omit<RefreshTokenRecord, 'id' | 'revokedAt' | 'createdAt'>,
+  ): Promise<void> {
+    await this.prisma.refreshToken.create({ data });
+  }
+
+  async consumeRefreshToken(
+    tokenHash: string,
+    now: Date,
+  ): Promise<RefreshTokenRecord | null> {
+    return this.prisma.$transaction(async (transaction) => {
+      const token = await transaction.refreshToken.findUnique({ where: { tokenHash } });
+      if (!token || token.revokedAt || token.expiresAt <= now) return null;
+
+      const consumed = await transaction.refreshToken.updateMany({
+        where: { id: token.id, revokedAt: null, expiresAt: { gt: now } },
+        data: { revokedAt: now },
+      });
+      if (consumed.count !== 1) return null;
+      return toRefreshTokenRecord({ ...token, revokedAt: now });
     });
   }
 

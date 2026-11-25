@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { loginSchema, registerSchema } from '../validators/auth.validators.js';
+import { loginSchema, registerSchema, tokenRefreshSchema } from '../validators/auth.validators.js';
 import {
   emailActionRequestSchema,
   emailVerificationConfirmSchema,
@@ -25,6 +25,16 @@ export class AuthController {
     try {
       const input = loginSchema.parse(req.body);
       const result = await this.authService.login(input, this.requestContext(req));
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  refresh = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const input = tokenRefreshSchema.parse(req.body);
+      const result = await this.authService.refresh(input, this.requestContext(req));
       res.status(200).json(result);
     } catch (error) {
       next(error);

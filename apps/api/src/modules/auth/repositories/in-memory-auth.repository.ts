@@ -5,6 +5,7 @@ import type {
   AuthSessionRecord,
   AuthUserRecord,
   CreateUserData,
+  RefreshTokenRecord,
 } from '../types/auth.types.js';
 
 interface InMemoryActionToken {
@@ -23,11 +24,16 @@ interface InMemoryActionToken {
 export class InMemoryAuthRepository implements AuthRepository {
   private readonly usersByEmail = new Map<string, AuthUserRecord>();
   private readonly sessionsByHash = new Map<string, AuthSessionRecord>();
+  private readonly refreshTokensByHash = new Map<string, RefreshTokenRecord>();
   private readonly actionTokensByHash = new Map<string, InMemoryActionToken>();
   private readonly actionRequestsAt = new Map<string, Date>();
 
   async findByEmail(email: string): Promise<AuthUserRecord | null> {
     return this.usersByEmail.get(email) ?? null;
+  }
+
+  async findById(id: string): Promise<AuthUserRecord | null> {
+    return [...this.usersByEmail.values()].find((user) => user.id === id) ?? null;
   }
 
   async create(data: CreateUserData): Promise<AuthUserRecord> {
@@ -64,6 +70,9 @@ export class InMemoryAuthRepository implements AuthRepository {
     for (const [hash, session] of this.sessionsByHash) {
       if (session.userId === id) this.sessionsByHash.delete(hash);
     }
+    for (const [hash, token] of this.refreshTokensByHash) {
+      if (token.userId === id) this.refreshTokensByHash.delete(hash);
+    }
     for (const [hash, token] of this.actionTokensByHash) {
       if (token.userId === id) this.actionTokensByHash.delete(hash);
     }
@@ -93,6 +102,27 @@ export class InMemoryAuthRepository implements AuthRepository {
   async revokeSession(tokenHash: string, now: Date): Promise<void> {
     const session = this.sessionsByHash.get(tokenHash);
     if (session && !session.revokedAt) session.revokedAt = now;
+  }
+
+  async createRefreshToken(
+    data: Omit<RefreshTokenRecord, 'id' | 'revokedAt' | 'createdAt'>,
+  ): Promise<void> {
+    this.refreshTokensByHash.set(data.tokenHash, {
+      ...data,
+      id: randomUUID(),
+      revokedAt: null,
+      createdAt: new Date(),
+    });
+  }
+
+  async consumeRefreshToken(
+    tokenHash: string,
+    now: Date,
+  ): Promise<RefreshTokenRecord | null> {
+    const token = this.refreshTokensByHash.get(tokenHash);
+    if (!token || token.revokedAt || token.expiresAt <= now) return null;
+    token.revokedAt = now;
+    return token;
   }
 
   async createActionToken(input: {
